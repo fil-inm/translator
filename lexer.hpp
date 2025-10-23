@@ -5,6 +5,11 @@
 #include <fstream>
 
 class Lexer {
+public:
+    Lexer(const std::string& filename);
+    void loadKeywordsFromFile(const std::string& filename);
+    Token nextLexem();
+
 private:
     std::ifstream file;
     Trie keywords;
@@ -17,8 +22,5 @@ private:
     void skipWhitespace();
     Token makeToken(TokenType type, const std::string& value);
 
-public:
-    Lexer(const std::string& filename);
-    void loadKeywordsFromFile(const std::string& filename);
-    Token nextLexem();
+
 };

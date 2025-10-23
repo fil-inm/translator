@@ -31,6 +31,8 @@ std::string tokenTypeToString(TokenType type) {
         case TokenType::OPERATOR_NOT:     return "OPERATOR_NOT";
         case TokenType::OPERATOR_INC:     return "OPERATOR_INC";
         case TokenType::OPERATOR_DEC:     return "OPERATOR_DEC";
+        case TokenType::OPERATOR_SCOPE:  return "OPERATOR_SCOPE";
+        case TokenType::OPERATOR_MOD:     return "OPERATOR_MOD";
 
         case TokenType::DELIM_SEMICOLON:  return "DELIM_SEMICOLON";
         case TokenType::DELIM_COMMA:      return "DELIM_COMMA";
@@ -41,6 +43,7 @@ std::string tokenTypeToString(TokenType type) {
         case TokenType::DELIM_RBRACE:     return "DELIM_RBRACE";
         case TokenType::DELIM_LBRACKET:   return "DELIM_LBRACKET";
         case TokenType::DELIM_RBRACKET:   return "DELIM_RBRACKET";
+        case TokenType::DELIM_COLON:     return "DELIM_COLON";
 
         case TokenType::END_OF_FILE:      return "END_OF_FILE";
         default:                          return "UNKNOWN";
@@ -62,27 +65,25 @@ int main() {
 
     std::ofstream out("tokens.txt");
     if (!out.is_open()) {
-        std::cerr << "❌ Cannot open tokens.txt for writing.\n";
+        std::cerr << "Cannot open tokens.txt for writing.\n";
         return 1;
     }
 
-    out << "-------------------------------------------------------------\n";
-    out << "| #  | TOKEN TYPE        | VALUE        | LINE | COLUMN |\n";
-    out << "-------------------------------------------------------------\n";
+    out << "---------------------------------\n";
+    out << "| #   | TOKEN TYPE        | VALUE\n";
+    out << "---------------------------------\n";
 
     int index = 1;
     for (const auto& t : tokens) {
         out << "| "
-            << std::setw(2) << index++ << " "
+            << std::setw(3) << index++ << " "
             << "| " << std::left << std::setw(17) << tokenTypeToString(t.type)
-            << "| " << std::left << std::setw(12) << t.value
-            << "| " << std::setw(5) << t.line
-            << "| " << std::setw(7) << t.column << "|\n";
+            << "| " << std::left << std::setw(12) << t.value <<"\n";
     }
 
-    out << "-------------------------------------------------------------\n";
+    out << "--------------------------------\n";
     out.close();
 
-    std::cout << "✅ Tokens written successfully!\n";
+    std::cout << "Tokens written successfully!\n";
     return 0;
 }

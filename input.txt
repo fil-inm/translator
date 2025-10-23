@@ -1,12 +1,12 @@
 class StayingAnimation {
-public:
+public:+
     StayingAnimation() {};
     StayingAnimation(int frameWidth, int frameHeight, int totalFrames, int x, int y, std::string source) : frameWidth_(frameWidth), 
         frameHeight_(frameHeight), currentFrame_(0), totalFrames_(totalFrames), x_(x), y_(y), source_(source) {
         heroTexture.loadFromFile(source_);
         heroSprite.setTexture(heroTexture);
         heroSprite.setTextureRect(sf::IntRect(0, 0, frameWidth, frameHeight));
-        heroSprite.setPosition(x_, y_);
+        heroSprite.setPosition(x_, y_)+;
     };
 
     sf::Sprite animating() {
