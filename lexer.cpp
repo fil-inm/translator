@@ -46,6 +46,36 @@ Token Lexer::makeToken(TokenType type, const std::string &value) {
 Token Lexer::nextLexem() {
     skipWhitespace();
 
+    while (!eof && currentChar == '/') {
+        readChar();
+        if (currentChar == '/') {
+            while (!eof && currentChar != '\n')
+                readChar();
+            readChar();
+            skipWhitespace();
+        } else if (currentChar == '*') {
+            bool foundEnd = false;
+            readChar();
+            while (!eof) {
+                if (currentChar == '*') {
+                    readChar();
+                    if (currentChar == '/') {
+                        foundEnd = true;
+                        readChar();
+                        break;
+                    }
+                } else {
+                    readChar();
+                }
+            }
+            if (!foundEnd)
+                std::cerr << "Warning: unterminated block comment\n";
+            skipWhitespace();
+        } else {
+            return makeToken(TokenType::OPERATOR_DIV, "/");
+        }
+    }
+
     if (eof)
         return makeToken(TokenType::END_OF_FILE, "");
 
@@ -71,8 +101,12 @@ Token Lexer::nextLexem() {
 
 
     if (std::isdigit(currentChar)) {
+        bool oneDot = true;
         std::string num;
-        while (std::isdigit(currentChar) || currentChar == '.') {
+        while ((std::isdigit(currentChar) || (currentChar == '.' && oneDot))) {
+            if (currentChar == '.') {
+                oneDot = false;
+            }
             num += currentChar;
             readChar();
         }
