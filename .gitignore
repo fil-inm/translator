@@ -1,0 +1,87 @@
+# === OS / System ===
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*.tmp
+*.log
+
+# === Git ===
+*.orig
+*.rej
+
+# === Build / Binary ===
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+Makefile
+*.o
+*.obj
+*.out
+*.a
+*.so
+*.dll
+*.exe
+*.pdb
+
+# === CLion / JetBrains ===
+.idea/
+cmake-build-debug/
+cmake-build-release/
+cmake-build-relwithdebinfo/
+cmake-build-minsizerel/
+
+# === CMake user configs ===
+CMakeUserPresets.json
+CMakeLists.txt.user*
+
+# === Backend generated ===
+*.jsonl
+*.log
+logs/
+bin/
+tmp/
+*.pid
+
+# === Python helper scripts (if any) ===
+__pycache__/
+*.pyc
+
+# === Node / React frontend ===
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+*.eslintcache
+
+# === Environment / Config ===
+.env
+.env.*
+!.env.example
+
+# === Editor backup ===
+*~
+*.bak
+
+# === Misc ===
+*.iml
+*.tgz
+*.zip
+*.tar
+*.gz
+*.7z
+
+# === Custom project artifacts ===
+frontend/.vite/
+frontend/node_modules/
+frontend/dist/
+backend/cmake-build-debug/
+backend/cmake-build-release/
+backend/tmp/
+
+
+input.txt
