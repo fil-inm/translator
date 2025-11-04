@@ -1,6 +1,6 @@
 <program> ::= <class>* <function>* <main>
 
-<type> ::= int | char | bool | float | <class_name>
+<type> ::= int | char | bool | float | void | <class_name>
 <identifier> ::= <letter> (<letter> | <digit>)*
 <letter> ::= [a-zA-Z_]
 <digit> ::= [0-9]
