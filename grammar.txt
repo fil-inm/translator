@@ -48,8 +48,7 @@
 
 <literal> ::= <integer_literal> | <floating_literal> | <character_literal> | <boolean_literal> | <nullptr_literal>
 
-<integer_literal> ::= <sign>? <digit> <digit>*
-
+<integer_literal> ::= <sign>? <digit_sequence>
 <floating_literal> ::= <sign>? <digit_sequence> "." <digit_sequence>
 <sign> ::= "+" | "-"
 <digit_sequence> ::= <digit> <digit>*
