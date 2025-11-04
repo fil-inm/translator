@@ -15,8 +15,18 @@
 <array_declaration> ::= <type> <identifier> "[" <integer_literal> "]" ("=" "{" <expression_list> "}")?
 
 
-<statement> ::= <declaration_statement> | <expression> ";" | <if_statement> | <while_statement> | <for_statement> | <return_statement> | <break_statement> | <continue_statement> | <print_statement> | <read_statement>
-<for_statement> ::= for "(" <for_init>? ";" <expression>? ";" <expression>? ")" "{" <statement>* "}"
+<statement> ::= <declaration_statement>
+               | <expression> ";"
+               | <if_statement>
+               | <while_statement>
+               | <for_statement>
+               | <return_statement>
+               | <break_statement>
+               | <continue_statement>
+               | <print_statement>
+               | <read_statement>
+
+<for_statement> ::= "for" "(" <for_init>? ";" <expression>? ";" <expression>? ")" "{" <statement>* "}"
 <for_init> ::= <expression> | <variable_declaration>
 <if_statement> ::= if "(" <expression> ")" "{" <statement>* "}" (elif "(" <expression> ")" "{" <statement>* "}")* (else "{" <statement>* "}")?
 <while_statement> ::= while "(" <expression> ")" "{" <statement>* "}"
