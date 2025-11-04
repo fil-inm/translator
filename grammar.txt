@@ -28,8 +28,13 @@
 
 <for_statement> ::= "for" "(" <for_init>? ";" <expression>? ";" <expression>? ")" "{" <statement>* "}"
 <for_init> ::= <expression> | <variable_declaration>
-<if_statement> ::= if "(" <expression> ")" "{" <statement>* "}" (elif "(" <expression> ")" "{" <statement>* "}")* (else "{" <statement>* "}")?
-<while_statement> ::= while "(" <expression> ")" "{" <statement>* "}"
+
+<if_statement> ::= "if" "(" <expression> ")" "{" <statement>* "}"
+                   ( "elif" "(" <expression> ")" "{" <statement>* "}" )*
+                   ( "else" "{" <statement>* "}" )?
+
+<while_statement> ::= "while" "(" <expression> ")" "{" <statement>* "}"
+
 <return_statement> ::= "return" <expression>? ";"
 <break_statement> ::= "break;"
 <continue_statement> ::= "continue;"
