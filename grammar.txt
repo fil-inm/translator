@@ -4,15 +4,15 @@
 <identifier> ::= <letter> (<letter> | <digit>)*
 <letter> ::= [a-zA-Z_]
 <digit> ::= [0-9]
-<parameters> ::= "(" <type> <identifier> ("," <type> <identifier>)* ")" | "()"
+<parameters> ::= "(" <type> <identifier> ("," <type> <identifier>)* ")" | "(" ")"
 <expression_list> ::= <expression> ("," <expression>)*
 //<character> ::= [^'\n]
 <character> ::= ([^'\\\n] | "\\" .)
 
 <declaration_statement> ::= <variable_declaration> ";" | <array_declaration> ";"
 
-<variable_declaration> ::= <type> <identifier> ("=" <expression>)?
-<array_declaration> ::= <type> <identifier> "[" <integer_literal> "]" ("=" "{" <expression_list> "}")?
+<variable_declaration> ::= <type> <identifier> ("=" <expression>)? ";"
+<array_declaration> ::= <type> <identifier> "[" <integer_literal> "]" ("=" "{" <expression_list> "}")? ";"
 
 
 <statement> ::= <declaration_statement> | <expression> ";" | <if_statement> | <while_statement> | <for_statement> | <return_statement> | <break_statement> | <continue_statement> | <print_statement> | <read_statement>
@@ -45,7 +45,8 @@
 
 <assignment_operator> ::= "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | "&=" | "^=" | "|="
 
-<expression> ::= <comma_expression>
+<expression> ::= <comma_expression> | <op_expression>
+<op_expression> ::= (<assignment_expression> "`")* <assignment_expression>
 <comma_expression> ::= <assignment_expression> (","<assignment_expression>)*
 <assignment_expression> ::= <logical_or_expression> | <postfix_expression> <assignment_operator> <assignment_expression>
 <postfix_expression> ::= <primary_expression> <postfix_operator>*
@@ -84,7 +85,7 @@
 <class_name> ::= <identifier>
 <class_body> ::= { <field_declaration>* <constructor>* <destructor> <method>* }
 
-<field_declaration> ::= <type> <identifier> ;
+<field_declaration> ::= <type> <identifier> ("," <type> <identifier>)* ";"
 <constructor> ::= "constructor" <class_name> <constructor_parameters> <constructor_body>
 <constructor_parameters> ::= <parameters>
 <constructor_body> ::= "{" <statement>* "}"
