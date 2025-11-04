@@ -11,8 +11,8 @@
 
 <declaration_statement> ::= <variable_declaration> ";" | <array_declaration> ";"
 
-<variable_declaration> ::= <type> <identifier> ("=" <expression>)? ";"
-<array_declaration> ::= <type> <identifier> "[" <integer_literal> "]" ("=" "{" <expression_list> "}")? ";"
+<variable_declaration> ::= <type> <identifier> ("=" <expression>)?
+<array_declaration> ::= <type> <identifier> "[" <integer_literal> "]" ("=" "{" <expression_list> "}")?
 
 
 <statement> ::= <declaration_statement> | <expression> ";" | <if_statement> | <while_statement> | <for_statement> | <return_statement> | <break_statement> | <continue_statement> | <print_statement> | <read_statement>
