@@ -1,4 +1,4 @@
-<programm> ::= <class>* <function>* <main>
+<program> ::= <class>* <function>* <main>
 
 <type> ::= int | char | bool | float | <class_name>
 <identifier> ::= <letter> (<letter> | <digit>)*
