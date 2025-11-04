@@ -57,7 +57,8 @@
 <boolean_literal> ::= "true" | "false"
 <nullptr_literal> ::= "nullptr"
 
-<assignment_operator> ::= "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | "&=" | "^=" | "|="
+<assignment_operator> ::= "=" | "+=" | "-=" | "*=" | "/=" | "%="
+                        | "<<=" | ">>=" | "&=" | "^=" | "|="
 
 <expression> ::= <comma_expression> | <op_expression>
 <op_expression> ::= (<assignment_expression> "`")* <assignment_expression>
