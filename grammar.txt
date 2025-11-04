@@ -95,9 +95,8 @@
 
 <unary_operator> ::= "&" | "*" | "+" | "-" | "!" | "~"
 
-<postfix_expression> ::= <primary_expression> <postfix_operator>*
+<postfix_expression> ::= <primary_expression> (<postfix_operator>* | "(" <expression_list>? ")")
 <postfix_operator> ::= "[" <expression> "]"
-                     | "(" <expression_list>? ")"
                      | "." <identifier>
                      | "->" <identifier>
                      | "++"
