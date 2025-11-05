@@ -1,6 +1,6 @@
 <program> ::= <class>* <function>* <main>
 
-<type> ::= int | char | bool | float | void | <class_name>
+<type> ::= "int" | "char" | "bool" | "float" | "void" | <class_name>
 <identifier> ::= <letter> (<letter> | <digit>)*
 <letter> ::= [a-zA-Z_]
 <digit> ::= [0-9]
@@ -57,11 +57,11 @@
 <assignment_operator> ::= "=" | "+=" | "-=" | "*=" | "/=" | "%="
                         | "<<=" | ">>=" | "&=" | "^=" | "|="
 
-<expression> ::= <comma_expression>
+<expression> ::= <comma_expression> | <apostrophe_expression>
 
-<comma_expression> ::= <apostrophe_expression> ("," <apostrophe_expression>)*
+<comma_expression> ::= <assignment_expression> ("," <assignment_expression>)*
 
-<apostrophe_expression> ::= <assignment_expression> ("`" <assignment_expression>)*
+<apostrophe_expression> ::= (<assignment_expression> "`")* <assignment_expression>
 
 <assignment_expression> ::= <logical_or_expression>
                            | <postfix_expression> <assignment_operator> <assignment_expression>
