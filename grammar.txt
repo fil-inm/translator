@@ -1,19 +1,20 @@
-<program> ::= <class>* <function>* <main>
+<program> ::= {<class>} {<function>} <main>
 
 <type> ::= "int" | "char" | "bool" | "float" | "void" | <class_name>
-<identifier> ::= <letter> (<letter> | <digit>)*
+<identifier> ::= <letter> {(<letter> | <digit>)}
 <letter> ::= [a-zA-Z_]
 <digit> ::= [0-9]
 
-<parameters> ::= "(" <type> <identifier> ("," <type> <identifier>)* ")" | "(" ")"
-<expression_list> ::= <expression> ("," <expression>)*
+<parameters> ::= "(" <type> <identifier> {("," <type> <identifier>)} ")" | "(" ")"
+<expression_list> ::= <expression> {("," <expression>)}
 
-<character> ::= ([^'\\\n] | "\\" .)
+<character> ::= []
+// все символы
 
 <declaration_statement> ::= <variable_declaration> ";" | <array_declaration> ";"
 
-<variable_declaration> ::= <type> <identifier> ("=" <expression>)?
-<array_declaration> ::= <type> <identifier> "[" <integer_literal> "]" ("=" "{" <expression_list> "}")?
+<variable_declaration> ::= <type> <identifier> [("=" <expression>)]
+<array_declaration> ::= <type> <identifier> "[" <integer_literal> "]" [("=" "{" <expression_list> "}")]
 
 
 <statement> ::= <declaration_statement>
@@ -27,59 +28,62 @@
                | <print_statement>
                | <read_statement>
 
-<for_statement> ::= "for" "(" <for_init>? ";" <expression>? ";" <expression>? ")" "{" <statement>* "}"
+<for_statement> ::= "for" "(" [<for_init>] ";" [<expression>] ";" [<expression>] ")" "{" {<statement>} "}"
 <for_init> ::= <expression> | <variable_declaration>
 
-<if_statement> ::= "if" "(" <expression> ")" "{" <statement>* "}"
-                   ( "elif" "(" <expression> ")" "{" <statement>* "}" )*
-                   ( "else" "{" <statement>* "}" )?
+<if_statement> ::= "if" "(" <expression> ")" "{" {<statement>} "}"
+                   {( "elif" "(" <expression> ")" "{" {<statement>} "}" )}
+                   [( "else" "{" {<statement>} "}" )]
 
-<while_statement> ::= "while" "(" <expression> ")" "{" <statement>* "}"
+<while_statement> ::= "while" "(" <expression> ")" "{" {<statement>} "}"
 
-<return_statement> ::= "return" <expression>? ";"
+<return_statement> ::= "return" [<expression>] ";"
 <break_statement> ::= "break;"
 <continue_statement> ::= "continue;"
 
 <print_statement> ::= "print" "(" <expression> ");"
 <read_statement> ::= "read" "(" <identifier> ");"
 
-<literal> ::= <integer_literal> | <floating_literal> | <character_literal> | <boolean_literal> | <nullptr_literal>
+<literal> ::= <integer_literal> | <floating_literal> | <character_literal> | <boolean_literal>
 
-<integer_literal> ::= <sign>? <digit_sequence>
-<floating_literal> ::= <sign>? <digit_sequence> "." <digit_sequence>
+<integer_literal> ::= [<sign>] <digit_sequence>
+<floating_literal> ::= [<sign>] <digit_sequence> "." <digit_sequence>
 <sign> ::= "+" | "-"
-<digit_sequence> ::= <digit> <digit>*
+<digit_sequence> ::= <digit> {<digit>}
 
 <character_literal> ::= "'" <character> "'"
 <boolean_literal> ::= "true" | "false"
-<nullptr_literal> ::= "nullptr"
 
 <assignment_operator> ::= "=" | "+=" | "-=" | "*=" | "/=" | "%="
                         | "<<=" | ">>=" | "&=" | "^=" | "|="
 
 <expression> ::= <comma_expression> | <apostrophe_expression>
 
-<comma_expression> ::= <assignment_expression> ("," <assignment_expression>)*
+<comma_expression> ::= <assignment_expression> {("," <assignment_expression>)}
 
-<apostrophe_expression> ::= (<assignment_expression> "`")* <assignment_expression>
+<apostrophe_expression> ::= {(<assignment_expression> "`")} <assignment_expression>
 
 <assignment_expression> ::= <logical_or_expression>
-                           | <postfix_expression> <assignment_operator> <assignment_expression>
+                           | <assignment_left_expression> <assignment_operator> <assignment_expression>
 
-<logical_or_expression> ::= <logical_and_expression> (("||" | "or") <logical_and_expression>)*
-<logical_and_expression> ::= <bitwise_or_expression> (("&&" | "and") <bitwise_or_expression>)*
-<bitwise_or_expression> ::= <bitwise_xor_expression> ("|" <bitwise_xor_expression>)*
-<bitwise_xor_expression> ::= <bitwise_and_expression> ("^" <bitwise_and_expression>)*
-<bitwise_and_expression> ::= <equality_expression> ("&" <equality_expression>)*
-<equality_expression> ::= <relational_expression> (<equality_operator> <relational_expression>)*
+<assignment_left_expression> ::= <identifier>
+                               | <cast_expression>
+                               | <postfix_expression> ("[" <expression> "]" | "." <identifier>)
+
+<logical_or_expression> ::= <logical_and_expression> {(("||" | "or") <logical_and_expression>)}
+<logical_and_expression> ::= <bitwise_or_expression> {(("&&" | "and") <bitwise_or_expression>)}
+<bitwise_or_expression> ::= <bitwise_xor_expression> {("|" <bitwise_xor_expression>)}
+<bitwise_xor_expression> ::= <bitwise_and_expression> {("^" <bitwise_and_expression>)}
+<bitwise_and_expression> ::= <equality_expression> {("&" <equality_expression>)}
+<equality_expression> ::= <relational_expression> {(<equality_operator> <relational_expression>)}
 <equality_operator> ::= "==" | "!="
-<relational_expression> ::= <shift_expression> (<relational_operator> <shift_expression>)*
+<relational_expression> ::= <shift_expression> {(<relational_operator> <shift_expression>)}
 <relational_operator> ::= "<" | ">" | "<=" | ">="
-<shift_expression> ::= <additive_expression> (<shift_operator> <additive_expression>)*
+<shift_expression> ::= <additive_expression> {(<shift_operator> <additive_expression>)}
 <shift_operator> ::= "<<" | ">>"
-<additive_expression> ::= <multiplicative_expression> (<additive_operator> <multiplicative_expression>)*
+<additive_expression> ::= <multiplicative_expression> {(<additive_operator> <multiplicative_expression>)}
 <additive_operator> ::= "+" | "-"
-<multiplicative_expression> ::= <cast_expression> (<multiplicative_operator> <cast_expression>)*
+<multiplicative_expression> ::= <cast_expression> {(<multiplicative_operator> <cast_expression>)}
 <multiplicative_operator> ::= "*" | "/" | "%"
 
 <cast_expression> ::= <unary_expression> | "(" <type> ")" <cast_expression>
@@ -87,37 +91,31 @@
                      | <unary_operator> <cast_expression>
                      | "++" <cast_expression>
                      | "--" <cast_expression>
-                     | "sizeof" <unary_expression>
-                     | "sizeof" "(" <type> ")"
-                     | "alignof" "(" <type> ")"
-                     | "new" <new_expression>
-                     | "delete" <delete_expression>
 
 <unary_operator> ::= "&" | "*" | "+" | "-" | "!" | "~"
 
-<postfix_expression> ::= <primary_expression> (<postfix_operator>* | "(" <expression_list>? ")")
+<postfix_expression> ::= <primary_expression> ({<postfix_operator>} | "(" [<expression_list>] ")")
 <postfix_operator> ::= "[" <expression> "]"
                      | "." <identifier>
-                     | "->" <identifier>
                      | "++"
                      | "--"
 
-<primary_expression> ::= <identifier> | <literal> | "(" <expression> ")" | "this"
+<primary_expression> ::= <identifier> | "(" <expression> ")"
 
-<new_expression> ::= <type> ("[" <expression> "]")?
-<delete_expression> ::= ("[" "]")? <cast_expression>
+<new_expression> ::= <type> [("[" <expression> "]")]
+<delete_expression> ::= [("[" "]")] <cast_expression>
 
 <class> ::= "class" <class_name> <class_body>
 <class_name> ::= <identifier>
-<class_body> ::= "{" <field_declaration>* <constructor>* <destructor>? <method>* "}"
+<class_body> ::= "{" {<field_declaration>} {<constructor>} <destructor> {<method>} "}"
 
-<field_declaration> ::= <type> <identifier> ("," <identifier>)* ";"
+<field_declaration> ::= <type> <identifier> {("," <identifier>)} ";"
 
-<constructor> ::= "constructor" <class_name> <parameters> "{" <statement>* "}"
-<destructor> ::= "destructor" <class_name> "()" "{" <statement>* "}"
-<method> ::= <type> <identifier> <parameters> "{" <statement>* "}"
+<constructor> ::= "constructor" <class_name> <parameters> "{" {<statement>} "}"
+<destructor> ::= "destructor" <class_name> "()" "{" {<statement>} "}"
+<method> ::= <type> <identifier> <parameters> "{" {<statement>} "}"
 
-<function> ::= <type> <function_name> <parameters> "{" <statement>* "}"
+<function> ::= <type> <function_name> <parameters> "{" {<statement>} "}"
 <function_name> ::= <identifier>
 
-<main> ::= "int" "main" <parameters> "{" <statement>* "}"
+<main> ::= "int" "main" <parameters> "{" {<statement>} "}"
