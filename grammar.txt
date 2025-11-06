@@ -102,9 +102,6 @@
 
 <primary_expression> ::= <identifier> | "(" <expression> ")"
 
-<new_expression> ::= <type> [("[" <expression> "]")]
-<delete_expression> ::= [("[" "]")] <cast_expression>
-
 <class> ::= "class" <class_name> <class_body>
 <class_name> ::= <identifier>
 <class_body> ::= "{" {<field_declaration>} {<constructor>} <destructor> {<method>} "}"
