@@ -1,0 +1,5 @@
+SpaceShip s;
+int main() {
+    s.fly();
+    return 0;
+}

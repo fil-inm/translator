@@ -1,0 +1,17 @@
+class Dog {
+    int energy;
+
+    constructor Dog() {
+        energy = 100;
+    }
+
+    void run() {
+        energy = energy - 10;
+        print(energy);
+    }
+
+int main() {
+    Dog d;
+    d.run();
+    return 0;
+}

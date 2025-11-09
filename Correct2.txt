@@ -1,0 +1,22 @@
+int main() {
+    int x = 10;
+    float y = 2.5;
+    bool flag = true;
+
+    if (x > y) {
+        print(x);
+    } else {
+        print(y);
+    }
+
+    for (int i = 0; i < 3; i++) {
+        print(i);
+    }
+
+    while (x > 0) {
+        x = x - 1;
+    }
+
+    read(x);
+    return 0;
+}

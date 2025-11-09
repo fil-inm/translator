@@ -1,0 +1,30 @@
+class Cat {
+    int lives;
+
+    constructor Cat() {
+        lives = 9;
+    }
+
+    destructor Cat() {
+        print(0);
+    }
+
+    void meow() {
+        print(1);
+    }
+
+    void dieOnce() {
+        lives = lives - 1;
+        if (lives <= 0){
+            print(100);}
+    }
+}
+
+int main() {
+    Cat kitty;
+    kitty.meow();
+    for (int i = 0; i < 3; i++) {
+        kitty.dieOnce();
+    }
+    return 0;
+}
