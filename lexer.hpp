@@ -1,41 +1,42 @@
 #pragma once
 #include "tokens.hpp"
+#include "trie.hpp"
+#include <string>
 #include <fstream>
+
 
 class Lexer {
 public:
-    explicit Lexer(std::string source);
-    static Lexer fromFile(const std::string& path);
-    void loadKeywordsFromFile(const std::string& path);
 
-    Token next();
-    const Token& peek();
-    bool eof() const { return m_eof; }
+    explicit Lexer(const std::string &filename, std::string keywordFile = "keywords.txt");
+    void loadKeywordsFromFile(const std::string& filename);
 
-    std::vector<Token> tokenizeAll();
+    Lexer(const Lexer&) = delete;
+    Lexer& operator=(const Lexer&) = delete;
+    Lexer(Lexer&& other) noexcept;
+    Lexer& operator=(Lexer&& other) noexcept;
+
+    const Token& currentLexeme() const;
+
+    Token nextLexem();
+    Token peekNextLexeme();
 
 private:
-    std::string m_src;
-    size_t m_i = 0;
-    int m_line = 1;
-    int m_col = 1;
-    bool m_eof = false;
-    Token m_lookahead{Token::Type::EndOfFile, "", {1,1}};
+    std::ifstream file;
+    Trie keywords;
+    char currentChar = '\0';
+    bool eof = false;
+    int line = 1;
+    int column = 0;
 
-    std::unordered_map<std::string, Token::Type> kw_;
+    Token currentToken;
 
-    bool atEnd() const { return m_i >= m_src.size(); }
-    char cur() const { return atEnd() ? '\0' : m_src[m_i]; }
-    char peekChar(int k=1) const { return (m_i + (size_t)k < m_src.size()) ? m_src[m_i+k] : '\0'; }
-    void advance();
-    void emitEof();
+    void readChar();
+    void skipWhitespaceAndComments();
+    Token makeToken(Token::Type type, const std::string& value, int line, int col);
 
-    void skipSpacesAndComments();
     Token readIdentifierOrKeyword();
     Token readNumber();
     Token readCharLiteral();
-    Token readOperatorOrPunct();
-
-    static bool isIdentStart(char c);
-    static bool isIdentCont(char c);
+    Token readOperatorOrDelimiter();
 };
