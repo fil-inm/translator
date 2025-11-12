@@ -5,10 +5,9 @@ float
 void
 class
 constructor
-destructor
+
 
 if
-elif
 else
 while
 for
@@ -21,6 +20,3 @@ read
 
 true
 false
-
-and
-or
