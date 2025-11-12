@@ -1,118 +1,101 @@
 <program> ::= {<class>} {<function>} <main>
 
-<type> ::= "int" | "char" | "bool" | "float" | "void" | <class_name>
+<type> ::= "int" | "char" | "bool" | "float" | "void" | <identifier>
 <identifier> ::= <letter> {(<letter> | <digit>)}
 <letter> ::= [a-zA-Z_]
 <digit> ::= [0-9]
 
-<parameters> ::= "(" <type> <identifier> {("," <type> <identifier>)} ")" | "(" ")"
-<expression_list> ::= <expression> {("," <expression>)}
+<literal> ::= <integer_literal> | <floating_literal> | <character_literal> | <boolean_literal> | <string_literal>
 
+<sign> ::= "+" | "-"
+<digit_sequence> ::= <digit> {<digit>}
+<integer_literal> ::= [<sign>] <digit_sequence>
+<floating_literal> ::= [<sign>] <digit_sequence> "." <digit_sequence>
+
+<character_literal> ::= "'" <character> "'"
+<string_literal> ::= "\"" {<character>} "\""
 <character> ::= []
-// все символы
 
-<declaration_statement> ::= <variable_declaration> ";" | <array_declaration> ";"
+<boolean_literal> ::= "true" | "false"
 
-<variable_declaration> ::= <type> <identifier> [("=" <expression>)]
-<array_declaration> ::= <type> <identifier> "[" <integer_literal> "]" [("=" "{" <expression_list> "}")]
+<declaration_statement> ::= <variable_declaration>| <array_declaration>
+
+<variable_declaration> ::= <type> <identifier>
+<array_declaration> ::= <type> <identifier> "[" <digit_sequence> "]"
 
 
-<statement> ::= <declaration_statement>
+<statement> ::= <declaration_statement> ";"
                | <expression> ";"
                | <if_statement>
                | <while_statement>
                | <for_statement>
-               | <return_statement>
-               | <break_statement>
-               | <continue_statement>
+               | "return" [<expression>] ";"
+               | "break" ";"
+               | "continue" ";"
                | <print_statement>
                | <read_statement>
+               | <statement>
 
-<for_statement> ::= "for" "(" [<for_init>] ";" [<expression>] ";" [<expression>] ")" "{" {<statement>} "}"
-<for_init> ::= <expression> | <variable_declaration>
+<for_statement> ::= "for" "(" <variable_declaration> "=" <expression> ";" <expression> ";" <expression> ")" "{" <statement> "}"
 
-<if_statement> ::= "if" "(" <expression> ")" "{" {<statement>} "}"
-                   {( "elif" "(" <expression> ")" "{" {<statement>} "}" )}
-                   [( "else" "{" {<statement>} "}" )]
+<if_statement> ::= "if" "(" <expression> ")" "{" <statement> "}" ["else" <statement>]
 
-<while_statement> ::= "while" "(" <expression> ")" "{" {<statement>} "}"
-
-<return_statement> ::= "return" [<expression>] ";"
-<break_statement> ::= "break;"
-<continue_statement> ::= "continue;"
+<while_statement> ::= "while" "(" <expression> ")" "{" <statement> "}"
 
 <print_statement> ::= "print" "(" <expression> ");"
-<read_statement> ::= "read" "(" <identifier> ");"
+<read_statement> ::= "read" "(" <l> ");"
 
-<literal> ::= <integer_literal> | <floating_literal> | <character_literal> | <boolean_literal>
 
-<integer_literal> ::= [<sign>] <digit_sequence>
-<floating_literal> ::= [<sign>] <digit_sequence> "." <digit_sequence>
-<sign> ::= "+" | "-"
-<digit_sequence> ::= <digit> {<digit>}
+Все операции и их приоритеты
+1. вызов функции индексирование
+2. ++ -- (префиксные) ! ~ + -
+3. * / %
+4. + -
+5. >> <<
+6. > < <= >=
+7. == !=
+8. &
+9. ^
+10. |
+11. &&
+12. ||
+13. =
+14. , или ` - не может в одном выражении и то и другое вне скобок
 
-<character_literal> ::= "'" <character> "'"
-<boolean_literal> ::= "true" | "false"
+<expression> ::= <,expression> | <`expression>
 
-<assignment_operator> ::= "=" | "+=" | "-=" | "*=" | "/=" | "%="
-                        | "<<=" | ">>=" | "&=" | "^=" | "|="
+<,expression> ::= <=expression> {("," <=expression>)}
+<`expression> ::= <=expression> {("`" <=expression>)}
 
-<expression> ::= <comma_expression> | <apostrophe_expression>
+<=expression> ::= [<l> "="] <||_expression>
 
-<comma_expression> ::= <assignment_expression> {("," <assignment_expression>)}
+<||_expression> ::= <&&expression> {"||" <&&expression>}
+<&&expression> ::= <|expression> {"&&" <|expression>}
 
-<apostrophe_expression> ::= {(<assignment_expression> "`")} <assignment_expression>
+<|expression> ::= <^expression> {"|" <^expression>}
+<^expression> ::= <&expression> {"^" <&expression>}
+<&expression> ::= <==expression> {"&" <==expression>}
 
-<assignment_expression> ::= <logical_or_expression>
-                           | <assignment_left_expression> <assignment_operator> <assignment_expression>
+<==expression> ::= <<expression> {("==" | "!=") <<expression>}
+<<expression> ::= <<<expression> {("<" | ">" | "<=" | ">=") <<<expression>}
 
-<assignment_left_expression> ::= <identifier>
-                               | <cast_expression>
-                               | <postfix_expression> ("[" <expression> "]" | "." <identifier>)
+<<<expression> ::= <+expression> {("<<" | ">>") <+expression>}
 
-<logical_or_expression> ::= <logical_and_expression> {(("||" | "or") <logical_and_expression>)}
-<logical_and_expression> ::= <bitwise_or_expression> {(("&&" | "and") <bitwise_or_expression>)}
-<bitwise_or_expression> ::= <bitwise_xor_expression> {("|" <bitwise_xor_expression>)}
-<bitwise_xor_expression> ::= <bitwise_and_expression> {("^" <bitwise_and_expression>)}
-<bitwise_and_expression> ::= <equality_expression> {("&" <equality_expression>)}
-<equality_expression> ::= <relational_expression> {(<equality_operator> <relational_expression>)}
-<equality_operator> ::= "==" | "!="
-<relational_expression> ::= <shift_expression> {(<relational_operator> <shift_expression>)}
-<relational_operator> ::= "<" | ">" | "<=" | ">="
-<shift_expression> ::= <additive_expression> {(<shift_operator> <additive_expression>)}
-<shift_operator> ::= "<<" | ">>"
-<additive_expression> ::= <multiplicative_expression> {(<additive_operator> <multiplicative_expression>)}
-<additive_operator> ::= "+" | "-"
-<multiplicative_expression> ::= <cast_expression> {(<multiplicative_operator> <cast_expression>)}
-<multiplicative_operator> ::= "*" | "/" | "%"
+<+expression> ::= <*expression> {("+" | "-") <*expression>}
+<*expression> ::= <!expression> {("*" | "/" | "%") <!expression>}
 
-<cast_expression> ::= <unary_expression> | "(" <type> ")" <cast_expression>
-<unary_expression> ::= <postfix_expression>
-                     | <unary_operator> <cast_expression>
-                     | "++" <cast_expression>
-                     | "--" <cast_expression>
+<!expression> ::= {("++" | "--" | "+" | "-" | "!" | "~")} <primary_expression>
 
-<unary_operator> ::= "&" | "*" | "+" | "-" | "!" | "~"
+<primary_expression> ::= "(" <expression> ")" | <l> | <literal>
 
-<postfix_expression> ::= <primary_expression> ({<postfix_operator>} | "(" [<expression_list>] ")")
-<postfix_operator> ::= "[" <expression> "]"
-                     | "." <identifier>
-                     | "++"
-                     | "--"
+<l> ::= <identifier> | <identifier> "[" <l> "]" | <identifier> "." <identifier>
 
-<primary_expression> ::= <identifier> | "(" <expression> ")"
 
-<class> ::= "class" <class_name> <class_body>
-<class_name> ::= <identifier>
-<class_body> ::= "{" {<field_declaration>} {<constructor>} <destructor> {<method>} "}"
+<class> ::= "class" <identifier> <class_body>
+<class_body> ::= "{" {<declaration_statement>} {<constructor>} {<function>} "}"
+<constructor> ::= "constructor" <parameters> "{" <statement> "}"
 
-<field_declaration> ::= <type> <identifier> {("," <identifier>)} ";"
+<function> ::= <type> <identifier> <parameters> "{" <statement> "}"
+<parameters> ::= "(" <type> <identifier> {"," <type> <identifier>} ")" | "(" ")"
 
-<constructor> ::= "constructor" <class_name> <parameters> "{" {<statement>} "}"
-<destructor> ::= "destructor" <class_name> "()" "{" {<statement>} "}"
-<method> ::= <type> <identifier> <parameters> "{" {<statement>} "}"
-
-<function> ::= <type> <function_name> <parameters> "{" {<statement>} "}"
-<function_name> ::= <identifier>
-
-<main> ::= "int" "main" <parameters> "{" {<statement>} "}"
+<main> ::= "main" <parameters> "{" <statement> "}"
