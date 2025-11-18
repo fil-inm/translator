@@ -123,6 +123,8 @@ Token Lexer::nextLexem() {
         currentToken = readNumber();
     } else if (currentChar == '\'') {
         currentToken = readCharLiteral();
+    } else if (currentChar == '"') {
+        currentToken = readStringLiteral();
     } else {
         currentToken = readOperatorOrDelimiter();
     }
@@ -161,9 +163,6 @@ Token Lexer::readIdentifierOrKeyword() {
         readChar();
     }
 
-    if (word == "true") return makeToken(Token::Type::KwTrue, word, startLine, startCol);
-    if (word == "false") return makeToken(Token::Type::KwFalse, word, startLine, startCol);
-
     if (keywords.search(word)) {
         if (word == "int") return makeToken(Token::Type::KwInt, word, startLine, startCol);
         if (word == "char") return makeToken(Token::Type::KwChar, word, startLine, startCol);
@@ -173,7 +172,7 @@ Token Lexer::readIdentifierOrKeyword() {
 
         if (word == "class") return makeToken(Token::Type::KwClass, word, startLine, startCol);
         if (word == "constructor") return makeToken(Token::Type::KwConstructor, word, startLine, startCol);
-        if (word == "destructor") return makeToken(Token::Type::KwDestructor, word, startLine, startCol);
+        if (word == "main") return makeToken(Token::Type::KwMain, word, startLine, startCol);
 
         if (word == "if") return makeToken(Token::Type::KwIf, word, startLine, startCol);
         if (word == "elif") return makeToken(Token::Type::KwElif, word, startLine, startCol);
@@ -187,8 +186,9 @@ Token Lexer::readIdentifierOrKeyword() {
         if (word == "print") return makeToken(Token::Type::KwPrint, word, startLine, startCol);
         if (word == "read") return makeToken(Token::Type::KwRead, word, startLine, startCol);
 
-        if (word == "and") return makeToken(Token::Type::KwAnd, word, startLine, startCol);
-        if (word == "or") return makeToken(Token::Type::KwOr, word, startLine, startCol);
+        if (word == "true") return makeToken(Token::Type::KwTrue, word, startLine, startCol);
+        if (word == "false") return makeToken(Token::Type::KwFalse, word, startLine, startCol);
+
     }
 
     return makeToken(Token::Type::Identifier, word, startLine, startCol);
@@ -217,8 +217,14 @@ Token Lexer::readNumber() {
 Token Lexer::readCharLiteral() {
     int startLine = line;
     int startCol = column == 0 ? 1 : column;
-    readChar();
+
+    readChar();  // пропускаем открывающую '
     std::string content;
+
+    if (eof || currentChar == '\n' || currentChar == '\'') {
+        std::cerr << "Error: empty char literal at " << startLine << ":" << startCol << "\n";
+        return makeToken(Token::Type::CharLiteral, "", startLine, startCol);
+    }
 
     if (currentChar == '\\') {
         content += currentChar;
@@ -227,14 +233,55 @@ Token Lexer::readCharLiteral() {
             content += currentChar;
             readChar();
         }
-    } else if (!eof && currentChar != '\'' && currentChar != '\n') {
+    } else {
         content += currentChar;
         readChar();
     }
-    if (currentChar == '\'')
+
+    if (currentChar != '\'') {
+        std::cerr << "Error: unterminated char literal at " << startLine << ":" << startCol << "\n";
+    } else {
         readChar();
+    }
 
     return makeToken(Token::Type::CharLiteral, content, startLine, startCol);
+}
+
+Token Lexer::readStringLiteral() {
+    int startLine = line;
+    int startCol = column == 0 ? 1 : column;
+
+    readChar();
+    std::string content;
+    bool escaped = false;
+
+    while (!eof) {
+        if (escaped) {
+            switch (currentChar) {
+                case 'n': content += '\n'; break;
+                case 't': content += '\t'; break;
+                case 'r': content += '\r'; break;
+                case '\\': content += '\\'; break;
+                case '"': content += '"'; break;
+                default: content += currentChar; break;
+            }
+            escaped = false;
+        } else if (currentChar == '\\') {
+            escaped = true;
+        } else if (currentChar == '"') {
+            readChar();
+            return makeToken(Token::Type::StringLiteral, content, startLine, startCol);
+        } else if (currentChar == '\n' || eof) {
+            std::cerr << "Warning: unterminated string literal at "
+                      << startLine << ":" << startCol << "\n";
+            break;
+        } else {
+            content += currentChar;
+        }
+        readChar();
+    }
+
+    return makeToken(Token::Type::StringLiteral, content, startLine, startCol);
 }
 
 Token Lexer::readOperatorOrDelimiter() {
@@ -242,22 +289,6 @@ Token Lexer::readOperatorOrDelimiter() {
     int startCol = column == 0 ? 1 : column;
     std::string op(1, currentChar);
     char next = file.peek();
-
-    if (!eof) {
-        std::string two = op + next;
-        if ((two == "<<" || two == ">>") && !file.eof()) {
-            char third;
-            file.get(third);
-            file.unget();
-            if (third == '=') {
-                readChar();
-                readChar();
-                readChar();
-                if (two == "<<") return makeToken(Token::Type::ShlAssign, "<<=", startLine, startCol);
-                else return makeToken(Token::Type::ShrAssign, ">>=", startLine, startCol);
-            }
-        }
-    }
 
     if (!eof) {
         std::string two = op + next;
@@ -300,31 +331,6 @@ Token Lexer::readOperatorOrDelimiter() {
             readChar();
             readChar();
             return makeToken(Token::Type::PipePipe, "||", startLine, startCol);
-        }
-        if (two == "+=") {
-            readChar();
-            readChar();
-            return makeToken(Token::Type::PlusAssign, "+=", startLine, startCol);
-        }
-        if (two == "-=") {
-            readChar();
-            readChar();
-            return makeToken(Token::Type::MinusAssign, "-=", startLine, startCol);
-        }
-        if (two == "*=") {
-            readChar();
-            readChar();
-            return makeToken(Token::Type::AsteriskAssign, "*=", startLine, startCol);
-        }
-        if (two == "/=") {
-            readChar();
-            readChar();
-            return makeToken(Token::Type::SlashAssign, "/=", startLine, startCol);
-        }
-        if (two == "%=") {
-            readChar();
-            readChar();
-            return makeToken(Token::Type::PercentAssign, "%=", startLine, startCol);
         }
         if (two == "<<") {
             readChar();

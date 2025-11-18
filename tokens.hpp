@@ -13,6 +13,7 @@ struct Token {
         IntegerLiteral,
         FloatLiteral,
         CharLiteral,
+        StringLiteral,
 
         LParen, RParen,
         LBrace, RBrace,
@@ -22,9 +23,7 @@ struct Token {
         Plus, Minus, Asterisk, Slash, Percent,
         PlusPlus, MinusMinus,
 
-        Assign, PlusAssign, MinusAssign, AsteriskAssign, SlashAssign, PercentAssign,
-        ShlAssign, ShrAssign,
-        AmpAssign, PipeAssign, CaretAssign,
+        Assign,
 
         Shl, Shr,
 
@@ -38,7 +37,8 @@ struct Token {
         KwInt, KwChar, KwBool, KwFloat, KwVoid,
 
         KwClass,
-        KwConstructor, KwDestructor,
+        KwConstructor,
+        KwMain,
 
         KwIf, KwElif, KwElse,
         KwWhile, KwFor,
@@ -47,7 +47,6 @@ struct Token {
         KwPrint, KwRead,
 
         KwTrue, KwFalse,
-        KwAnd, KwOr,
 
         TypeName
     };
@@ -88,16 +87,6 @@ inline std::string tokenTypeName(Token::Type t) {
         case T::MinusMinus: return "--";
 
         case T::Assign: return "=";
-        case T::PlusAssign: return "+=";
-        case T::MinusAssign: return "-=";
-        case T::AsteriskAssign: return "*=";
-        case T::SlashAssign: return "/=";
-        case T::PercentAssign: return "%=";
-        case T::ShlAssign: return "<<=";
-        case T::ShrAssign: return ">>=";
-        case T::AmpAssign: return "&=";
-        case T::PipeAssign: return "|=";
-        case T::CaretAssign: return "^=";
 
         case T::Shl: return "<<";
         case T::Shr: return ">>";
@@ -124,7 +113,7 @@ inline std::string tokenTypeName(Token::Type t) {
         case T::KwVoid: return "void";
         case T::KwClass: return "class";
         case T::KwConstructor: return "constructor";
-        case T::KwDestructor: return "destructor";
+        case T::KwMain: return "main";
         case T::KwIf: return "if";
         case T::KwElif: return "elif";
         case T::KwElse: return "else";
@@ -137,8 +126,7 @@ inline std::string tokenTypeName(Token::Type t) {
         case T::KwRead: return "read";
         case T::KwTrue: return "true";
         case T::KwFalse: return "false";
-        case T::KwAnd: return "and";
-        case T::KwOr: return "or";
+
 
 
         case T::TypeName: return "<type-name>";

@@ -33,10 +33,13 @@ private:
 
     void readChar();
     void skipWhitespaceAndComments();
-    Token makeToken(Token::Type type, const std::string& value, int line, int col);
+    static Token makeToken(Token::Type type, const std::string& value, int line, int col);
 
     Token readIdentifierOrKeyword();
     Token readNumber();
     Token readCharLiteral();
+
+    Token readStringLiteral();
+
     Token readOperatorOrDelimiter();
 };

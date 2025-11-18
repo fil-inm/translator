@@ -5,6 +5,7 @@ float
 void
 class
 constructor
+main
 
 
 if
