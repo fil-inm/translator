@@ -7,10 +7,9 @@
 
 <literal> ::= <integer_literal> | <floating_literal> | <character_literal> | <boolean_literal> | <string_literal>
 
-<sign> ::= "+" | "-"
 <digit_sequence> ::= <digit> {<digit>}
-<integer_literal> ::= [<sign>] <digit_sequence>
-<floating_literal> ::= [<sign>] <digit_sequence> "." <digit_sequence>
+<integer_literal> ::=<digit_sequence>
+<floating_literal> ::=<digit_sequence> "." <digit_sequence>
 
 <character_literal> ::= "'" <character> "'"
 <string_literal> ::= "\"" {<character>} "\""
@@ -48,7 +47,7 @@
 
 Все операции и их приоритеты
 1. вызов функции индексирование
-2. ++ -- (префиксные) ! ~ + -
+2. ++ -- (префиксные) ! ~ -
 3. * / %
 4. + -
 5. >> <<
@@ -84,7 +83,7 @@
 <+expression> ::= <*expression> {("+" | "-") <*expression>}
 <*expression> ::= <!expression> {("*" | "/" | "%") <!expression>}
 
-<!expression> ::= {("++" | "--" | "+" | "-" | "!" | "~")} <primary_expression>
+<!expression> ::= {("++" | "--" | "-" | "!" | "~")} <primary_expression>
 
 <primary_expression> ::= "(" <expression> ")" | <l> | <literal>
 
