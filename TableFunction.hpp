@@ -1,7 +1,7 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-struct Node{
+struct TItem{
     string name;
     string type;
     int id = 0;
@@ -10,30 +10,33 @@ struct Node{
 
 class TableFunction{
 private:
-    deque<Node> nodes;
+    deque<TItem> nodes;
 
 public:
-    void New_func(Node newfunc){
+    void New_func(string name, string type, deque<string> parameters){
+        TItem newfunc;
+        newfunc.name = name, newfunc.type = type, newfunc.parameters = parameters;
         for(auto i : nodes){
-            if(i.name == newfunc.name){
-                if(i.type == newfunc.type){
-                    if(i.parameters == newfunc.parameters){
-                        throw string("Same function is already exist");
+            if(i.name == name){
+                if(i.type == type){
+                    if(i.parameters == parameters){
+                        throw runtime_error("Same function is already exist");
                     } else{
                         newfunc.id = nodes[nodes.size() - 1].id + 1;
                     }
                 }
             }
         }
+        nodes.push_back(newfunc);
     }
 
-    string check_call(string name, deque<string> param){
+    string check_call(string name, deque<string> parameters){
         for(auto i : nodes){
-            if(i.name == name && param == i.parameters){
+            if(i.name == name && parameters == i.parameters){
                 return i.type;
             }
         }
-        throw string("This function is not declared in this scope");
+        throw runtime_error("This function is not declared in this scope");
         return "";
     }
 };

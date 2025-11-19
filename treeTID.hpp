@@ -17,7 +17,7 @@ public:
     void del_Tid(){
         nodes.clear();
     }
-    auto get_map(){
+    map<string,pair<string,string>> get_map(){
         return nodes;
     }
 };
@@ -38,11 +38,10 @@ public:
     bool check_ID(string name){
         for(int ind = nodes.size() - 1; ind >= 0;--ind){
             if(nodes[ind].get_map().find(name) != nodes[ind].get_map().end()){
-                throw string("This identifier already exist in parent number " + to_string(ind));
+                throw runtime_error("This identifier already exist in parent number " + to_string(ind));
                 return 1;
             }
         }
         return 0;
     }
-
 };

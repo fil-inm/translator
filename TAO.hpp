@@ -1,8 +1,9 @@
 #include <bits/stdc++.h>
+#include "tokens.hpp"
 using namespace std;
 
 struct SItem {
-    enum Kind { TYPE, OP } kind;
+    Token::Type kind;
     string value;
 };
 
@@ -10,11 +11,8 @@ class SemStack {
 private:
     stack<SItem> st;
 public:
-    void pushType(const string &t);
-    void pushOp(const string &op);
+    void push(Token::Type &t, const string &val);
     SItem pop();
-    SItem top() const;
+    Token::Type check_bin();
+    Token::Type check_uno();
 };
-
-string check_bin(const string &a, const string &op, const string &b);
-string check_uno(const string &op, const string &a);

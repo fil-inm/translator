@@ -1,11 +1,8 @@
 #include "TAO.hpp"
+#include "tokens.hpp"
 
-void SemStack::pushType(const string &t){
-    st.push({SItem::TYPE, t});
-}
-
-void SemStack::pushOp(const string &op){
-    st.push({SItem::OP, op});
+void SemStack::push(Token::Type &t, const string& val){
+    st.push({t, val});
 }
 
 SItem SemStack::pop(){
@@ -14,44 +11,51 @@ SItem SemStack::pop(){
     return x;
 }
 
-SItem SemStack::top() const{
-    return st.top();
+Token::Type SemStack::check_uno(){
+    Token::Type a = pop().kind;
+    Token::Type op = pop().kind;
+
+    if (op == Token::Type::Minus) {
+        if (a == Token::Type::KwInt || a == Token::Type::KwFloat) return a;
+        throw runtime_error("Unary - requires numeric operand");
+    }
+
+    if (op == Token::Type::Exclamation) {
+        if (a == Token::Type::KwBool && a == Token::Type::KwInt) return Token::Type::KwBool;
+        throw runtime_error("Unary ! requires bool operand");
+    }
+
+    if (op == Token::Type::Tilde) {
+        if (a == Token::Type::KwInt) return Token::Type::KwInt;
+        throw runtime_error("Unary ~ requires int operand");
+    }
+
+    if(op == Token::Type::PlusPlus || op == Token::Type::MinusMinus) {
+        if (a == Token::Type::KwInt || a == Token::Type::KwFloat || a == Token::Type::KwChar) return a;
+        throw runtime_error("Unary pref inkrement / decrement requires int operand");
+    }
+
+    throw runtime_error("Something went wrong");
 }
 
-string check_bin(const string &a, const string &op, const string &b) {
-    if (op == "+" || op == "-" || op == "*" || op == "/") {
-        if (a == "int" && b == "int") return "int";
-        if ((a == "float" && b == "int") || (a == "int" && b == "float")) return "float";
-        if (a == "float" && b == "float") return "float";
-        throw string("Type error in binary arithmetic expression");
+Token::Type SemStack::check_bin(){
+    Token::Type a = pop().kind;
+    Token::Type op = pop().kind;
+    Token::Type b = pop().kind;
+
+    if (op == Token::Type::Plus || op == Token::Type::Minus || op == Token::Type::Asterisk || op == Token::Type::Slash) {
+        if(a == Token::Type::KwInt && b == Token::Type::KwInt) return Token::Type::KwInt;
+        if ((a == Token::Type::KwInt || a == Token::Type::KwFloat) && (b == Token::Type::KwInt || b == Token::Type::KwFloat)) return Token::Type::KwFloat;
+        throw runtime_error("Type error in binary arithmetic expression");
     }
 
-    if (op == "<" || op == ">" || op == "<=" || op == ">=" ||
-        op == "==" || op == "!="){ return "bool";}
+    if (op == Token::Type::Less || op == Token::Type::Greater || op == Token::Type::LessEqual || op == Token::Type::GreaterEqual ||
+        op == Token::Type::EqualEqual || op == Token::Type::NotEqual){ return Token::Type::KwBool;}
 
-    if (op == "&&" || op == "||") {
-        if (a == "bool" && b == "bool") return "bool";
-        throw string("Logical operation requires boolean operands");
+    if (op == Token::Type::AmpAmp || op == Token::Type::PipePipe) {
+        if (a == Token::Type::KwBool && b == Token::Type::KwBool) return Token::Type::KwBool;
+        throw runtime_error("Logical operation requires boolean operands");
     }
 
-    throw string("Unknown binary operator: " + op);
-}
-
-string check_uno(const string &op, const string &a) {
-    if (op == "+" || op == "-") {
-        if (a == "int" || a == "float") return a;
-        throw string("Unary +/- requires numeric operand");
-    }
-
-    if (op == "!") {
-        if (a == "bool") return "bool";
-        throw string("Unary ! requires bool operand");
-    }
-
-    if (op == "~") {
-        if (a == "int") return "int";
-        throw string("Unary ~ requires int operand");
-    }
-
-    throw string("Unknown unary operator: " + op);
+    throw runtime_error("Something went wrong");
 }
