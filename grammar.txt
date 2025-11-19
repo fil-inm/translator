@@ -17,7 +17,7 @@
 
 <boolean_literal> ::= "true" | "false"
 
-<declaration_statement> ::= <variable_declaration>| <array_declaration>
+<declaration_statement> ::= <variable_declaration> | <array_declaration>
 
 <variable_declaration> ::= <type> <identifier>
 <array_declaration> ::= <type> <identifier> "[" <digit_sequence> "]"
@@ -33,16 +33,16 @@
                | "continue" ";"
                | <print_statement>
                | <read_statement>
-               | <statement>
+               | {<statement>}
 
 <for_statement> ::= "for" "(" <variable_declaration> "=" <expression> ";" <expression> ";" <expression> ")" "{" <statement> "}"
 
-<if_statement> ::= "if" "(" <expression> ")" "{" <statement> "}" ["else" <statement>]
+<if_statement> ::= "if" "(" <expression> ")" "{" <statement> "}" ["else" ("{"<statement>"}" | <if_statement>)]
 
 <while_statement> ::= "while" "(" <expression> ")" "{" <statement> "}"
 
 <print_statement> ::= "print" "(" <expression> ");"
-<read_statement> ::= "read" "(" <l> ");"
+<read_statement> ::= "read" "(" <l> | <identifier> "." <identifier> ");"
 
 
 Все операции и их приоритеты
@@ -83,11 +83,11 @@
 <+expression> ::= <*expression> {("+" | "-") <*expression>}
 <*expression> ::= <!expression> {("*" | "/" | "%") <!expression>}
 
-<!expression> ::= {("++" | "--" | "-" | "!" | "~")} <primary_expression>
+<!expression> ::= {("++" | "--" | "-" | "!" | "~")} <primary_expression> | <literal>
 
-<primary_expression> ::= "(" <expression> ")" | <l> | <literal>
+<primary_expression> ::= "(" <expression> ")" | <l> | <identifier> "." <identifier>
 
-<l> ::= <identifier> | <identifier> "[" <l> "]" | <identifier> "." <identifier>
+<l> ::= <identifier> | <identifier> "[" <l> | <identifier> "." <identifier>  "]"
 
 
 <class> ::= "class" <identifier> <class_body>
