@@ -23,6 +23,8 @@
 <array_declaration> ::= <type> <identifier> "[" <digit_sequence> "]"
 
 
+<block> ::= "{" {<statement>} "}"
+
 <statement> ::= <declaration_statement> ";"
                | <expression> ";"
                | <if_statement>
@@ -33,16 +35,16 @@
                | "continue" ";"
                | <print_statement>
                | <read_statement>
-               | {<statement>}
+               | <block>
 
-<for_statement> ::= "for" "(" <variable_declaration> "=" <expression> ";" <expression> ";" <expression> ")" "{" <statement> "}"
+<for_statement> ::= "for" "(" <variable_declaration> "=" <expression> ";" <expression> ";" <expression> ")" <block>
 
-<if_statement> ::= "if" "(" <expression> ")" "{" <statement> "}" ["else" ("{"<statement>"}" | <if_statement>)]
+<if_statement> ::= "if" "(" <expression> ")" <block> ["else" (<block> | <if_statement>)]
 
-<while_statement> ::= "while" "(" <expression> ")" "{" <statement> "}"
+<while_statement> ::= "while" "(" <expression> ")" <block>
 
 <print_statement> ::= "print" "(" <expression> ");"
-<read_statement> ::= "read" "(" <l> | <identifier> "." <identifier> ");"
+<read_statement> ::= "read" "(" ( <l> | <identifier> "." <identifier> | <identifier> "(" <expression> {","<expression>} ");"
 
 
 Все операции и их приоритеты
@@ -85,16 +87,16 @@
 
 <!expression> ::= {("++" | "--" | "-" | "!" | "~")} <primary_expression> | <literal>
 
-<primary_expression> ::= "(" <expression> ")" | <l> | <identifier> "." <identifier>
+<primary_expression> ::= "(" <expression> ")" | <l> | <identifier> "." <identifier> | <identifier> "(" <expression> {","<expression>} ")"
 
 <l> ::= <identifier> | <identifier> "[" <l> | <identifier> "." <identifier>  "]"
 
 
 <class> ::= "class" <identifier> <class_body>
-<class_body> ::= "{" {<declaration_statement>} {<constructor>} {<function>} "}"
-<constructor> ::= "constructor" <parameters> "{" <statement> "}"
+<class_body> ::= "{" {<declaration_statement>} <constructor> {<constructor>} {<function>} "}"
+<constructor> ::= "constructor" <parameters> <block>
 
-<function> ::= <type> <identifier> <parameters> "{" <statement> "}"
+<function> ::= <type> <identifier> <parameters> <block>
 <parameters> ::= "(" <type> <identifier> {"," <type> <identifier>} ")" | "(" ")"
 
-<main> ::= "main" <parameters> "{" <statement> "}"
+<main> ::= "main" <parameters> <block>

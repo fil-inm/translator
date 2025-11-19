@@ -8,52 +8,44 @@ public:
     explicit Parser(Lexer& lexer);
 
     bool parseProgram();
-    const std::string& lastError() const { return m_error; }
 
 private:
     Lexer& lex;
-    std::string m_error;
     int errLine = 0, errCol = 0;
 
-    bool match(Token::Type t);
-    bool expect(Token::Type t, const std::string& what);
-    bool error(const std::string& msg);
+    bool match(Token::Type t) const;
+    bool matchType() const;
 
-    bool parseProgram_Classes();
-    bool parseProgram_Functions();
-    bool parseMain();
+    bool expect(Token::Type t, const std::string& what) const;
+
 
     bool parseClass();
     bool parseClassBody();
-    bool parseFieldDecl();
     bool parseConstructor();
-    bool parseDestructor();
-    bool parseMethod();
 
     bool parseFunction();
-
-    bool parseType();
     bool parseParameters();
-    bool parseExpressionList();
-    bool parseVariableDecl();
-    bool parseArrayDecl();
+    bool parseMain();
 
+    bool parseType() const;
+    bool parseLiteral();
+    bool parseLValue();
+    bool parseLValueMethod();
+
+    bool parseBlock();
     bool parseStatement();
     bool parseDeclarationStatement();
     bool parseIfStatement();
     bool parseWhileStatement();
     bool parseForStatement();
     bool parseReturnStatement();
-    bool parseBreakStatement();
-    bool parseContinueStatement();
     bool parsePrintStatement();
     bool parseReadStatement();
 
     bool parseExpression();
     bool parseCommaExpression();
-    bool parseApostropheExpression();
+    // bool parseApostropheExpression();
     bool parseAssignmentExpression();
-    bool parseAssignmentLeftExpression();
     bool parseLogicalOrExpression();
     bool parseLogicalAndExpression();
     bool parseBitwiseOrExpression();
@@ -64,16 +56,6 @@ private:
     bool parseShiftExpression();
     bool parseAdditiveExpression();
     bool parseMultiplicativeExpression();
-    bool parseCastExpression();
     bool parseUnaryExpression();
-    bool parsePostfixExpression();
     bool parsePrimaryExpression();
-
-    bool isTypeToken(Token::Type t);
-
-    bool parseLiteral();
-    bool parseIntegerLiteral();
-    bool parseFloatingLiteral();
-    bool parseCharacterLiteral();
-    bool parseBooleanLiteral();
 };

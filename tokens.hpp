@@ -40,7 +40,7 @@ struct Token {
         KwConstructor,
         KwMain,
 
-        KwIf, KwElif, KwElse,
+        KwIf, KwElse,
         KwWhile, KwFor,
         KwReturn, KwBreak, KwContinue,
 
@@ -115,7 +115,6 @@ inline std::string tokenTypeName(Token::Type t) {
         case T::KwConstructor: return "constructor";
         case T::KwMain: return "main";
         case T::KwIf: return "if";
-        case T::KwElif: return "elif";
         case T::KwElse: return "else";
         case T::KwWhile: return "while";
         case T::KwFor: return "for";
