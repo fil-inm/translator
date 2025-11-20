@@ -85,7 +85,7 @@
 <+expression> ::= <*expression> {("+" | "-") <*expression>}
 <*expression> ::= <!expression> {("*" | "/" | "%") <!expression>}
 
-<!expression> ::= {("++" | "--" | "-" | "!" | "~")} <primary_expression> | <literal>
+<!expression> ::= {("++" | "--" | "-" | "!" | "~")} <primary_expression> | <primary_expression> | <literal>
 
 <primary_expression> ::= "(" <expression> ")" | <l> | <identifier> "." <identifier> | <identifier> "(" <expression> {","<expression>} ")"
 

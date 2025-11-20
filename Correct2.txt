@@ -1,7 +1,7 @@
-int main() {
-    int x = 10;
-    float y = 2.5;
-    bool flag = true;
+main() {
+    int x;
+    float y;
+    bool flag;
 
     if (x > y) {
         print(x);
@@ -9,7 +9,7 @@ int main() {
         print(y);
     }
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; ++i) {
         print(i);
     }
 

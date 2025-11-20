@@ -175,7 +175,6 @@ Token Lexer::readIdentifierOrKeyword() {
         if (word == "main") return makeToken(Token::Type::KwMain, word, startLine, startCol);
 
         if (word == "if") return makeToken(Token::Type::KwIf, word, startLine, startCol);
-        if (word == "elif") return makeToken(Token::Type::KwElif, word, startLine, startCol);
         if (word == "else") return makeToken(Token::Type::KwElse, word, startLine, startCol);
         if (word == "while") return makeToken(Token::Type::KwWhile, word, startLine, startCol);
         if (word == "for") return makeToken(Token::Type::KwFor, word, startLine, startCol);

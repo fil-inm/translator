@@ -14,10 +14,11 @@ bool Parser::matchType() const {
         Token::Type::KwFloat,
         Token::Type::KwVoid,
         Token::Type::KwChar,
-        Token::Type::KwBool,
-        Token::Type::TypeName
-    };
+        Token::Type::KwBool};
 
+    if (lex.currentLexeme().type == Token::Type::Identifier and lex.peekNextLexeme().type == Token::Type::Identifier) {
+        return true;
+    }
     return types.contains(lex.currentLexeme().type);
 }
 
@@ -49,7 +50,7 @@ bool Parser::parseProgram() {
     } catch (const std::exception &e) {
         errLine = lex.currentLexeme().pos.line;
         errCol = lex.currentLexeme().pos.column;
-        std::cerr << "\033[1;31m"
+        std::cout << "\033[1;31m"
                 << "Error at " << errLine << ":" << errCol << "\n"
                 << e.what()
                 << "\033[0m\n";
@@ -93,8 +94,6 @@ bool Parser::parseClassBody() {
 
 bool Parser::parseConstructor() {
     expect(Token::Type::KwConstructor, "'constructor'");
-    expect(Token::Type::Identifier, "class name in constructor");
-
     if (!parseParameters())
         return false;
 
@@ -162,9 +161,13 @@ bool Parser::parseType() const {
         case Token::Type::KwBool:
         case Token::Type::KwFloat:
         case Token::Type::KwVoid:
-        case Token::Type::Identifier:
             lex.nextLexem();
             return true;
+        case Token::Type::Identifier:
+            if (lex.peekNextLexeme().type == Token::Type::Identifier) {
+                lex.nextLexem();
+                return true;
+            }
         default:
             throw std::runtime_error("expected type");
     }
@@ -200,41 +203,81 @@ bool Parser::parseLiteral() {
 }
 
 bool Parser::parseLValue() {
-    expect(Token::Type::Identifier, "'lvalue'");
-    if (match(Token::Type::LBracket)) {
-        lex.nextLexem();
-        if (!parseLValueMethod())
-            return false;
-        expect(Token::Type::RBracket, "close of array");
-        return true;
-    }
-    return true;
-}
+    expect(Token::Type::Identifier, "identifier");
 
-bool Parser::parseLValueMethod() {
-    expect(Token::Type::Identifier, "lvalue");
-    if (match(Token::Type::LBracket)) {
-        lex.nextLexem();
-        if (!parseLValueMethod())
-            return false;
-        expect(Token::Type::RBracket, "close of array");
-        return true;
-    } else if (match(Token::Type::Dot)) {
-        lex.nextLexem();
-        expect(Token::Type::Identifier, "method name");
-    } else if (match(Token::Type::LParen)) {
-        lex.nextLexem();
-        if (!parseExpression())
-            return false;
-        while (match(Token::Type::Comma)) {
+    // zero or more postfixes
+    while (true) {
+        if (match(Token::Type::LBracket)) {
+            // array indexing: a[expr]
             lex.nextLexem();
             if (!parseExpression())
                 return false;
+            expect(Token::Type::RBracket, "']' after index");
         }
-        expect(Token::Type::RParen, "close of function");
+        else if (match(Token::Type::Dot)) {
+            // member access: a.b
+            lex.nextLexem();
+            expect(Token::Type::Identifier, "member name");
+        }
+        else if (match(Token::Type::LParen)) {
+            // call: a(...)
+            lex.nextLexem();
+            if (!match(Token::Type::RParen)) {
+                if (!parseExpression())
+                    return false;
+                while (match(Token::Type::Comma)) {
+                    lex.nextLexem();
+                    if (!parseExpression())
+                        return false;
+                }
+            }
+            expect(Token::Type::RParen, "')' after call");
+        }
+        else break;
     }
+
     return true;
 }
+
+// bool Parser::parseLValueMethod() {
+//     expect(Token::Type::Identifier, "lvalue");
+//     if (match(Token::Type::LBracket)) {
+//         lex.nextLexem();
+//         if (!parseLValueMethod())
+//             return false;
+//         expect(Token::Type::RBracket, "close of array");
+//         return true;
+//     } else if (match(Token::Type::Dot)) {
+//         lex.nextLexem();
+//         expect(Token::Type::Identifier, "method name");
+//         expect(Token::Type::LParen, "'(' for open method");
+//         if (match(Token::Type::RParen)) {
+//             lex.nextLexem();
+//             return true;
+//         } else {
+//             if (!parseExpression())
+//                 return false;
+//             while (match(Token::Type::Comma)) {
+//                 lex.nextLexem();
+//                 expect(Token::Type::Identifier, "method name");
+//             }
+//             expect(Token::Type::RParen, "')' after method");
+//             return true;
+//
+//         }
+//     } else if (match(Token::Type::LParen)) {
+//         lex.nextLexem();
+//         if (!parseExpression())
+//             return false;
+//         while (match(Token::Type::Comma)) {
+//             lex.nextLexem();
+//             if (!parseExpression())
+//                 return false;
+//         }
+//         expect(Token::Type::RParen, "close of function");
+//     }
+//     return true;
+// }
 
 
 bool Parser::parseBlock() {
@@ -297,6 +340,8 @@ bool Parser::parseStatement() {
 }
 
 bool Parser::parseDeclarationStatement() {
+    if (!parseType())
+        return false;
     expect(Token::Type::Identifier, "variable or array name");
 
     if (match(Token::Type::LBracket)) {
@@ -375,8 +420,7 @@ bool Parser::parseForStatement() {
     if (!parseExpression())
         return false;
 
-    expect(Token::Type::Semicolon, "';' after change expression");
-
+    expect(Token::Type::RParen, "')' for close for");
     return true;
 }
 
@@ -411,7 +455,7 @@ bool Parser::parseReadStatement() {
     expect(Token::Type::KwRead, "'read'");
     expect(Token::Type::LParen, "'(' after 'read'");
 
-    if (!parseLValueMethod())
+    if (!parseLValue())
         return false;
 
     expect(Token::Type::RParen, "')' after 'read' argument");
@@ -451,7 +495,7 @@ bool Parser::parseCommaExpression() {
 // }
 
 bool Parser::parseAssignmentExpression() {
-    if (match(Token::Type::Identifier)) {
+    if (match(Token::Type::Identifier) && lex.peekNextLexeme().type == Token::Type::Assign) {
         if (!parseLValue())
             return false;
         expect(Token::Type::Assign, "= after lvalue");
@@ -585,12 +629,20 @@ bool Parser::parseMultiplicativeExpression() {
 }
 
 bool Parser::parseUnaryExpression() {
-    if (match(Token::Type::MinusMinus) || match(Token::Type::PlusPlus ) || match(Token::Type::Minus ) || match(Token::Type::Exclamation) || match(Token::Type::Tilde)) {
+    if (match(Token::Type::MinusMinus) || match(Token::Type::PlusPlus) || match(Token::Type::Minus) ||
+        match(Token::Type::Exclamation) || match(Token::Type::Tilde)) {
         lex.nextLexem();
-        while (match(Token::Type::MinusMinus) || match(Token::Type::PlusPlus ) || match(Token::Type::Minus ) || match(Token::Type::Exclamation) || match(Token::Type::Tilde)) {
+        while (match(Token::Type::MinusMinus) || match(Token::Type::PlusPlus) || match(Token::Type::Minus) ||
+               match(Token::Type::Exclamation) || match(Token::Type::Tilde)) {
             lex.nextLexem();
         }
         if (!parsePrimaryExpression())
+            return false;
+    } else if (match(Token::Type::LParen)) {
+        if (!parsePrimaryExpression())
+            return false;
+    } else if (match(Token::Type::Identifier)) {
+        if (!parseLValue())
             return false;
     } else if (!parseLiteral())
         return false;
@@ -604,9 +656,11 @@ bool Parser::parsePrimaryExpression() {
         if (!parseExpression())
             return false;
         expect(Token::Type::RParen, "')' after expression");
+        return true;
     }
-    else if (!parseLValueMethod())
-        return false;
 
-    return true;
+    if (match(Token::Type::Identifier))
+        return parseLValue();
+
+    return parseLiteral();
 }

@@ -66,6 +66,7 @@ inline std::string tokenTypeName(Token::Type t) {
         case T::IntegerLiteral: return "integer literal";
         case T::FloatLiteral: return "float literal";
         case T::CharLiteral: return "char literal";
+        case T::StringLiteral: return "string literal";
 
         case T::LParen: return "(";
         case T::RParen: return ")";
