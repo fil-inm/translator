@@ -1,47 +1,58 @@
-#include <bits/stdc++.h>
-using namespace std;
+#pragma once
+#include <map>
+#include <deque>
+#include <stdexcept>
+#include "tokens.hpp"
 
-class TID{
+class TID {
 private:
-    map<string,pair<string,string>> nodes;
+    std::map<std::string,std::pair<Token::Type,std::string>> nodes;
+
 public:
-    TID() : nodes() {}
-    void push_id(string name, string type, string value){
-        if(nodes.find(name) == nodes.end()){
-            throw string("This name already exist");
-            return;
-        } else{
-            nodes[name] = {type, value};
-        }
+    void push_id(const std::string& name, Token::Type type, const std::string& value){
+        if(nodes.count(name)) throw std::runtime_error("identifier already declared: " + name);
+        nodes[name] = {type,value};
     }
-    void del_Tid(){
-        nodes.clear();
+
+    bool contains(const std::string& name) const{
+        return nodes.count(name);
     }
-    map<string,pair<string,string>> get_map(){
-        return nodes;
+
+    Token::Type check_id(const std::string& name){
+        if(contains(name)) return nodes[name].first;
+        throw std::runtime_error("This variable is not declared in this scope");
     }
+
+    const auto& get() const { return nodes; }
 };
 
-class treeTID{
+
+class treeTID {
 private:
-    deque<TID> nodes;
+    std::deque<TID> nodes;
+
 public:
-    treeTID() : nodes() {}
     void create_TID(){
-        TID newTID;
-        nodes.push_back(newTID);
+        nodes.emplace_back();
     }
+
     void del_TID(){
-        nodes[nodes.size() - 1].del_Tid();
+        if(nodes.empty())
+            throw std::runtime_error("scope stack empty");
         nodes.pop_back();
     }
-    bool check_ID(string name){
-        for(int ind = nodes.size() - 1; ind >= 0;--ind){
-            if(nodes[ind].get_map().find(name) != nodes[ind].get_map().end()){
-                throw runtime_error("This identifier already exist in parent number " + to_string(ind));
-                return 1;
-            }
+
+    void push_id(const std::string& name, Token::Type t, const std::string& val){
+        if(nodes.empty())
+            throw std::runtime_error("scope stack empty");
+        nodes.back().push_id(name,t,val);
+    }
+
+    Token::Type lookup(const std::string& name){
+        for(int i = nodes.size()-1; i>=0; i--){
+            if(nodes[i].contains(name))
+                return nodes[i].get().at(name).first;
         }
-        return 0;
+        throw std::runtime_error("variable not declared: "+name);
     }
 };
