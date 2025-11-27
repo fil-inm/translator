@@ -1,35 +1,27 @@
-#include <iostream>
-#include <deque>
-#include "tokens.hpp"
-
-struct MethodSig{
-    Token::Type type;
-    std::vector<Token::Type> parameters;
-};
+#include "TableFunction.hpp"
 
 class MethodTable {
 private:
-    std::map<std::string, std::map<std::string, std::vector<MethodSig>>> methods;
+    std::map<std::string, FuncTable> cam;
 
 public:
-    void New_method(const std::string& cls, const std::string& name, Token::Type t, const std::vector<Token::Type>& params){
-        auto &vec = methods[cls][name];
-
-        for(auto &m:vec){
-            if(m.parameters==params)
-                throw std::runtime_error("method overload exists: "+cls+"."+name);
+    void New_method(const std::string& cls, const std::string& name, const FuncSig& func){
+        for(auto meth: cam[cls].get()[name]){
+            if(meth.parameters == func.parameters) throw std::runtime_error("The same method is already exist");
         }
-        vec.push_back({t,params});
+
+        cam[cls].get()[name].push_back(func);
     }
 
-    Token::Type check_call(const std::string& cls,
-                           const std::string& name,
-                           const std::vector<Token::Type>& params)
-    {
-        for(auto &m:methods[cls][name]){
-            if(m.parameters==params)
-                return m.type;
+    Token::Type check_call(const std::string& cls, const std::string& name, const std::vector<Token::Type> parameters){
+        if(!cam.count(cls)) throw std::runtime_error("Class with this name is not declared");
+        if(!cam[cls].get().count(name)) throw std::runtime_error("Method with this name is not declared");
+
+        for(auto meth : cam[cls].get()[name]){
+            if(meth.parameters == parameters) return meth.type;
         }
-        throw std::runtime_error("class method not found: "+cls+"."+name);
+
+        throw std::runtime_error("This method is not exist");
     }
+
 };

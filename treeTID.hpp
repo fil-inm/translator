@@ -1,4 +1,3 @@
-#pragma once
 #include <map>
 #include <deque>
 #include <stdexcept>
@@ -10,20 +9,10 @@ private:
 
 public:
     void push_id(const std::string& name, Token::Type type, const std::string& value){
-        if(nodes.count(name)) throw std::runtime_error("identifier already declared: " + name);
+        if(nodes.count(name)) throw std::runtime_error("Identifier already declared: " + name);
         nodes[name] = {type,value};
     }
-
-    bool contains(const std::string& name) const{
-        return nodes.count(name);
-    }
-
-    Token::Type check_id(const std::string& name){
-        if(contains(name)) return nodes[name].first;
-        throw std::runtime_error("This variable is not declared in this scope");
-    }
-
-    const auto& get() const { return nodes; }
+    auto& get() { return nodes; }
 };
 
 
@@ -37,22 +26,15 @@ public:
     }
 
     void del_TID(){
-        if(nodes.empty())
-            throw std::runtime_error("scope stack empty");
+        if(nodes.empty()) throw std::runtime_error("Scope stack empty");
         nodes.pop_back();
     }
 
-    void push_id(const std::string& name, Token::Type t, const std::string& val){
-        if(nodes.empty())
-            throw std::runtime_error("scope stack empty");
-        nodes.back().push_id(name,t,val);
-    }
-
-    Token::Type lookup(const std::string& name){
-        for(int i = nodes.size()-1; i>=0; i--){
-            if(nodes[i].contains(name))
-                return nodes[i].get().at(name).first;
+    Token::Type check_id(const std::string& name){
+        for(int tid = nodes.size() - 1; tid >= 0; --tid){
+            if(!nodes[tid].get().count(name)) throw std::runtime_error("Identifiar is alreade exist");
+            return (nodes[tid].get())[name].first;
         }
-        throw std::runtime_error("variable not declared: "+name);
+        throw std::runtime_error("Identifiar is alreade exist");
     }
 };
