@@ -6,13 +6,12 @@
 #include <unordered_map>
 #include <memory>
 
-// Структура для хранения информации о типе
 struct TypeInfo {
     Token::Type baseType;
-    std::string className;    // для пользовательских типов (классов)
+    std::string className;
     bool isArray;
-    int arraySize;            // для массивов (-1 если не массив)
-    Token::Type elementType;  // для массивов
+    int arraySize;
+    Token::Type elementType;
     
     TypeInfo(Token::Type bt = Token::Type::KwVoid, const std::string& cn = "", 
              bool ia = false, int as = -1, Token::Type et = Token::Type::EndOfFile)
