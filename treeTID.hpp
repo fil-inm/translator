@@ -1,47 +1,40 @@
-#include <bits/stdc++.h>
-using namespace std;
+#include <map>
+#include <deque>
+#include <stdexcept>
+#include "tokens.hpp"
 
-class TID{
+class TID {
 private:
-    map<string,pair<string,string>> nodes;
+    std::map<std::string,std::pair<Token::Type,std::string>> nodes;
+
 public:
-    TID() : nodes() {}
-    void push_id(string name, string type, string value){
-        if(nodes.find(name) == nodes.end()){
-            throw string("This name already exist");
-            return;
-        } else{
-            nodes[name] = {type, value};
-        }
+    void push_id(const std::string& name, Token::Type type, const std::string& value){
+        if(nodes.count(name)) throw std::runtime_error("Identifier already declared: " + name);
+        nodes[name] = {type,value};
     }
-    void del_Tid(){
-        nodes.clear();
-    }
-    map<string,pair<string,string>> get_map(){
-        return nodes;
-    }
+    auto& get() { return nodes; }
 };
 
-class treeTID{
+
+class treeTID {
 private:
-    deque<TID> nodes;
+    std::deque<TID> nodes;
+
 public:
-    treeTID() : nodes() {}
     void create_TID(){
-        TID newTID;
-        nodes.push_back(newTID);
+        nodes.emplace_back();
     }
+
     void del_TID(){
-        nodes[nodes.size() - 1].del_Tid();
+        if(nodes.empty()) throw std::runtime_error("Scope stack empty");
         nodes.pop_back();
     }
-    bool check_ID(string name){
-        for(int ind = nodes.size() - 1; ind >= 0;--ind){
-            if(nodes[ind].get_map().find(name) != nodes[ind].get_map().end()){
-                throw runtime_error("This identifier already exist in parent number " + to_string(ind));
-                return 1;
-            }
+
+    Token::Type check_id(const std::string& name){
+        for(int tid = nodes.size() - 1; tid >= 0; --tid){
+            if(!nodes[tid].get().count(name)) throw std::runtime_error("Identifiar is alreade exist");
+            return (nodes[tid].get())[name].first;
         }
-        return 0;
+        throw std::runtime_error("Identifiar is alreade exist");
     }
 };

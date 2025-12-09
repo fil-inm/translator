@@ -1,42 +1,42 @@
-#include <bits/stdc++.h>
-using namespace std;
+#include "tokens.hpp"
 
-struct TItem{
-    string name;
-    string type;
-    int id = 0;
-    deque<string> parameters;
+struct FuncSig {
+    Token::Type type;
+    std::vector<Token::Type> parameters;
+
+    const bool operator==(const FuncSig& rhs){
+        if(type == rhs.type && parameters == rhs.parameters) return 1;
+        return 0;
+    }
 };
 
-class TableFunction{
+class FuncTable {
 private:
-    deque<TItem> nodes;
+    std::map<std::string,std::vector<FuncSig>> funcs;
 
 public:
-    void New_func(string name, string type, deque<string> parameters){
-        TItem newfunc;
-        newfunc.name = name, newfunc.type = type, newfunc.parameters = parameters;
-        for(auto i : nodes){
-            if(i.name == name){
-                if(i.type == type){
-                    if(i.parameters == parameters){
-                        throw runtime_error("Same function is already exist");
-                    } else{
-                        newfunc.id = nodes[nodes.size() - 1].id + 1;
-                    }
+    void New_func(const std::string& name, const FuncSig& info){
+        for(auto& vecfunc : funcs){
+            for(auto& func : vecfunc.second){
+                if(func == info){
+                    throw std::runtime_error("The same function is already exist");
                 }
             }
         }
-        nodes.push_back(newfunc);
+
+        funcs[name].push_back(info);
     }
 
-    string check_call(string name, deque<string> parameters){
-        for(auto i : nodes){
-            if(i.name == name && parameters == i.parameters){
-                return i.type;
-            }
+    Token::Type check_call(const std::string& name, std::vector<Token::Type> parameters){
+        if(!funcs.count(name)) throw std::runtime_error("This name of function is not declared");
+
+        for(auto func : funcs[name]){
+            if(func.parameters == parameters) return func.type;
         }
-        throw runtime_error("This function is not declared in this scope");
-        return "";
+
+        throw std::runtime_error("This list of parameters is not exist");
     }
+
+    auto& get(){ return funcs; }
 };
+ 
