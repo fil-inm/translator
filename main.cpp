@@ -8,7 +8,7 @@ int main() {
     const std::string keywordsFile = "keywords.txt";
 
     std::vector<std::string> testFiles = {
-        "Correct1.txt",
+        "tests/Correct1.txt",
         // "Correct2.txt",
         // "Correct3.txt",
         // "Incorrect1.txt",
