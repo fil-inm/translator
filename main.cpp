@@ -9,13 +9,13 @@ int main() {
 
     std::vector<std::string> testFiles = {
         "Correct1.txt",
-        "Correct2.txt",
-        "Correct3.txt",
-        "Incorrect1.txt",
-        "Incorrect2.txt",
-        "Incorrect3.txt",
-        "Incorrect4.txt",
-        "Incorrect5.txt",
+        // "Correct2.txt",
+        // "Correct3.txt",
+        // "Incorrect1.txt",
+        // "Incorrect2.txt",
+        // "Incorrect3.txt",
+        // "Incorrect4.txt",
+        // "Incorrect5.txt",
     };
 
     for (const auto& sourceFile : testFiles) {

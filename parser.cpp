@@ -346,12 +346,13 @@ bool Parser::parseDeclarationStatement() {
 
     if (match(Token::Type::LBracket)) {
         expect(Token::Type::LBracket, "[ before size of array");
-
         expect(Token::Type::IntegerLiteral, " integer size of array");
         expect(Token::Type::RBracket, " ] after size of array");
+        expect(Token::Type::Semicolon, " ; after decloration");
+
         return true;
     }
-    expect(Token::Type::Semicolon, "expected ; after decloration");
+    expect(Token::Type::Semicolon, " ; after decloration");
 
     return true;
 }

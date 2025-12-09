@@ -1,6 +1,5 @@
 #pragma once
 #include <string>
-#include <bits/stdc++.h>
 
 struct SourcePos {
     int line = 1;

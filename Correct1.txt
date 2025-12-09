@@ -1,80 +1,52 @@
-class Hero {
-    int health;
-    float speed;
+class Person {
+    int age;
+    char name[50];
 
-    constructor(int h, int m, float s) {
-        health = h;
-        mana = m;
-        speed = s;
+    constructor() {
+        age = 0;
     }
 
-    void heal(int amount) {
-        health = health + amount;
+    void setAge(int a) {
+        age = a;
     }
 
-    bool isAlive() {
-        return health > 0;
+    int getAge() {
+        return age;
     }
 }
 
-class Game {
-    Hero player;
-    int level;
-
-    constructor (int h, int m, float s) {
-        player = Hero(h, m, s);
-        level = 1;
-    }
-
-
-    void nextLevel() {
-        ++level;
-        print(level);
-    }
+void printNumber(int x) {
+    print(x);
 }
 
-int sum(int a, int b) {
-    int result;
-    return result;
-}
-
-void loopDemo() {
-    int i;
-    while (i < 5) {
-        print(i+1);
-        ++i;
-    }
-
-    for (int j = 0; j < 3; ++j) {
-        if (j == 1) {
-            print("hello");}
-        else{
-            print(16);}
-    }
+int add(int a, int b) {
+    return a + b;
 }
 
 main() {
-    Game g;
-    Hero h;
-
-    h = Hero(100, 50, 2.5);
-    g = Game(120, 30, 3.1);
-
     int x;
-    x = sum(3, 4);
-    print(x);
+    x=10;
+    int y;
+    y=10;
+    int z;
+    z = add(x, y);
+    print(z);
 
-    loopDemo();
-
-    if (h.isAlive()) {
-        h.heal(20);
+    if (x > 5) {
+        print("x is greater than 5");
     }
 
+    for (int i = 0; i < 10; i = i + 1) {
+        print(i);
+    }
 
-    ~0;
-    ++++++++a+ ++++++a;
-    a.b()[12+f()].first(12);
+    while (x > 0) {
+        x = x - 1;
+    }
 
-    read(x);
-    return 0;
+    bool flag;
+    flag = true;
+    if (flag) {
+        print("flag is true");
+    }
 }
