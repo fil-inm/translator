@@ -22,10 +22,13 @@ int main() {
         std::cout << "=== Проверяю: " << sourceFile << " ===\n";
 
         Lexer lexer(sourceFile, keywordsFile);
-        Parser parser(lexer);
+        Semanter sem;
+        Poliz   poliz;
+        Parser parser(lexer, sem, poliz);
 
         if (parser.parseProgram()) {
             std::cout << "Разбор завершён успешно\n\n";
+            poliz.dump(std::cout); // пока просто посмотрим ПОЛИЗ
         }
     }
 

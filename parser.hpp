@@ -1,22 +1,34 @@
 #pragma once
 #include "lexer.hpp"
+#include "semanter.hpp"
+#include "poliz.hpp"
 #include <string>
 #include <unordered_set>
 
 class Parser {
 public:
-    explicit Parser(Lexer& lexer);
+    explicit Parser(Lexer& lexer, Semanter& semanter, Poliz& poliz);
 
     bool parseProgram();
 
 private:
     Lexer& lex;
+    Semanter& sem;
+    Poliz&   poliz;     // ← вот он
     int errLine = 0, errCol = 0;
 
-    bool match(Token::Type t) const;
-    bool matchType() const;
+    std::string currentFunctionName;
+    bool        hasCurrentFunction = false;
+    TypeInfo    currentReturnType;
 
-    bool expect(Token::Type t, const std::string& what) const;
+    std::string currentClassName;
+    bool        inClass = false;
+    bool currentIsMethod = false;
+
+    bool match(Token::Type t) ;
+    bool matchType() ;
+
+    bool expect(Token::Type t, const std::string& what) ;
 
 
     bool parseClass();
@@ -27,10 +39,11 @@ private:
     bool parseParameters();
     bool parseMain();
 
-    bool parseType() const;
+    bool parseType() ;
+    TypeInfo parseTypeSemantic();
+
     bool parseLiteral();
     bool parseLValue();
-    bool parseLValueMethod();
 
     bool parseBlock();
     bool parseStatement();

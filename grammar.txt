@@ -63,10 +63,9 @@
 13. =
 14. , или ` - не может в одном выражении и то и другое вне скобок
 
-<expression> ::= <,expression> | <`expression>
+<expression> ::= <,expression>
 
 <,expression> ::= <=expression> {("," <=expression>)}
-<`expression> ::= <=expression> {("`" <=expression>)}
 
 <=expression> ::= [<l> "="] <||_expression>
 

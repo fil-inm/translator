@@ -31,6 +31,17 @@ main() {
     int z;
     z = add(x, y);
     print(z);
+    z  = ++x + 10 + false;
+    char q;
+    q = 'd';
+    z = z + q;
+
+
+    int a[10];
+    a[q] = 5;
+    float qwe;
+    qwe = 12.4;
+    z = a[qwe];
 
     if (x > 5) {
         print("x is greater than 5");

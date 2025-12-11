@@ -10,4 +10,6 @@ add_executable(TranslatorLexer
         lexer.cpp
         trie.cpp
         parser.cpp
+        semanter.cpp
+        poliz.cpp
         )
