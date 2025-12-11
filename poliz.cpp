@@ -1,4 +1,5 @@
 #include "poliz.hpp"
+#include <stdexcept>
 
 // ============================
 // Добавление инструкций
@@ -10,8 +11,8 @@ int Poliz::emit(Op op, int arg1, int arg2) {
 }
 
 int Poliz::emitJump(Op op) {
-    // op должен быть JUMP или JUMP_IF_FALSE (но жёстко не проверяем, можно потом assert)
-    return emit(op, -1); // -1 = "цель пока неизвестна"
+    // op должен быть JUMP или JUMP_IF_FALSE — не проверяем жёстко
+    return emit(op, -1); // -1 = placeholder
 }
 
 void Poliz::patchJump(int instrIndex, int targetIp) {
@@ -94,8 +95,6 @@ void Poliz::dump(std::ostream& os) const {
         const auto& ins = code[i];
         os << i << ":\t" << opName(ins.op);
 
-        // По умолчанию печатаем arg1/arg2, если они не равны 0
-        // Можно усложнить логикой по op, но пока так.
         if (ins.arg1 != 0 || ins.arg2 != 0) {
             os << " " << ins.arg1;
             if (ins.arg2 != 0)
@@ -110,5 +109,6 @@ void Poliz::dump(std::ostream& os) const {
             os << i << ": \"" << stringPool[i] << "\"\n";
         }
     }
+
     os << "===================\n";
 }

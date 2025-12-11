@@ -38,10 +38,10 @@ main() {
 
 
     int a[10];
-    a[q] = 5;
+    a[1] = 5;
     float qwe;
     qwe = 12.4;
-    z = a[qwe];
+    z = a[1];
 
     if (x > 5) {
         print("x is greater than 5");

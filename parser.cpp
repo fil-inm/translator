@@ -1,7 +1,9 @@
 #include "parser.hpp"
 #include <iostream>
+#include <optional>
 
-Parser::Parser(Lexer &lexer, Semanter &semanter, Poliz& poliz) : lex(lexer), sem(semanter), poliz(poliz) {
+Parser::Parser(Lexer &lexer, Semanter &semanter, Poliz &p)
+    : lex(lexer), sem(semanter), poliz(p) {
 }
 
 bool Parser::match(Token::Type t)  {
@@ -16,7 +18,8 @@ bool Parser::matchType()  {
         Token::Type::KwChar,
         Token::Type::KwBool};
 
-    if (lex.currentLexeme().type == Token::Type::Identifier and lex.peekNextLexeme().type == Token::Type::Identifier) {
+    if (lex.currentLexeme().type == Token::Type::Identifier &&
+        lex.peekNextLexeme().type == Token::Type::Identifier) {
         return true;
     }
     return types.contains(lex.currentLexeme().type);
@@ -29,7 +32,6 @@ bool Parser::expect(Token::Type t, const std::string &what)  {
     }
     throw std::runtime_error("expected " + what + ", got " + tokenTypeName(lex.currentLexeme().type));
 }
-
 
 bool Parser::parseProgram() {
     try {
@@ -51,13 +53,15 @@ bool Parser::parseProgram() {
         errLine = lex.currentLexeme().pos.line;
         errCol = lex.currentLexeme().pos.column;
         std::cout << "\033[1;31m"
-                << "Error at " << errLine << ":" << errCol << "\n"
-                << e.what()
-                << "\033[0m\n";
+                  << "Error at " << errLine << ":" << errCol << "\n"
+                  << e.what()
+                  << "\033[0m\n";
         return false;
     }
 }
 
+// ===== Классы / функции / main — как у тебя, без ПОЛИЗа =====
+// (ничего не меняем, кроме конструктора Parser)
 
 bool Parser::parseClass() {
     expect(Token::Type::KwClass, "'class'");
@@ -109,11 +113,9 @@ bool Parser::parseClassBody() {
 bool Parser::parseConstructor() {
     expect(Token::Type::KwConstructor, "'constructor'");
 
-    // делаем уникальное имя конструктора на всякий случай
     std::string ctorName = currentClassName + "_ctor";
     sem.addConstructor(currentClassName, ctorName);
 
-    // параметры конструктора в своём scope
     sem.enterScope();
     if (!parseParameters())
         return false;
@@ -124,7 +126,6 @@ bool Parser::parseConstructor() {
 
     return true;
 }
-
 
 bool Parser::parseFunction() {
     TypeInfo retType = parseTypeSemantic();
@@ -138,18 +139,14 @@ bool Parser::parseFunction() {
     hasCurrentFunction  = true;
     currentIsMethod     = inClass;
 
-    // регистрируем функцию/метод
     if (inClass) {
-        // метод класса
         std::string uniq = currentClassName + "::" + fname;
         sem.addClassMethod(currentClassName, fname, uniq, retType);
     } else {
-        // глобальная функция
         std::string uniq = fname;
         sem.declareFunction(fname, uniq, retType);
     }
 
-    // scope для параметров и тела
     sem.enterScope();
     if (!parseParameters()) return false;
     if (!parseBlock())     return false;
@@ -171,7 +168,6 @@ bool Parser::parseParameters() {
     }
 
     auto addParam = [&](const TypeInfo& t, const std::string& pname) {
-        // в сигнатуру функции/метода
         if (hasCurrentFunction) {
             if (currentIsMethod) {
                 sem.addMethodParam(currentClassName, currentFunctionName, t);
@@ -179,11 +175,9 @@ bool Parser::parseParameters() {
                 sem.addFunctionParam(currentFunctionName, pname, t);
             }
         }
-        // в локальную область
         sem.declareVariable(pname, t);
     };
 
-    // первый параметр
     {
         TypeInfo t = parseTypeSemantic();
         Token nameTok = lex.currentLexeme();
@@ -229,6 +223,7 @@ bool Parser::parseMain() {
     return true;
 }
 
+// ===== Типы =====
 
 bool Parser::parseType()  {
     switch (lex.currentLexeme().type) {
@@ -253,28 +248,21 @@ TypeInfo Parser::parseTypeSemantic() {
     Token tok = lex.currentLexeme();
 
     switch (tok.type) {
-        // Базовые типы
         case Token::Type::KwInt:
         case Token::Type::KwChar:
         case Token::Type::KwBool:
         case Token::Type::KwFloat:
         case Token::Type::KwVoid: {
-            // Сдвигаем лексер вперёд
             lex.nextLexem();
-            // Строим TypeInfo через семантер
             return sem.makeType(tok.type);
         }
 
-            // Имя класса (пользовательский тип)
         case Token::Type::Identifier: {
-            // Случай "MyClass x;" — сейчас токен = "MyClass",
-            // следующий токен должен быть идентификатором имени переменной.
             if (lex.peekNextLexeme().type == Token::Type::Identifier) {
-                std::string className = tok.lexeme;  // <-- если поле называется иначе, поправь здесь
-                lex.nextLexem();                     // съедаем идентификатор-типа
+                std::string className = tok.lexeme;
+                lex.nextLexem();
                 return sem.makeType(Token::Type::Identifier, className);
             }
-            // Если следующий токен не Identifier — это не тип, а просто обычный идентификатор
             [[fallthrough]];
         }
 
@@ -283,25 +271,79 @@ TypeInfo Parser::parseTypeSemantic() {
     }
 }
 
+// ===== Литералы (ТУТ ПОДКЛЮЧАЕМ POLIZ) =====
+
 bool Parser::parseLiteral() {
     Token tok = lex.currentLexeme();
 
     switch (tok.type) {
-        case Token::Type::IntegerLiteral:
-        case Token::Type::FloatLiteral:
-        case Token::Type::CharLiteral:
-        case Token::Type::StringLiteral:
+        case Token::Type::IntegerLiteral: {
+            TypeInfo t = sem.getLiteralType(tok);
+            sem.pushType(t);
+
+            int value = std::stoi(tok.lexeme);
+            poliz.emit(Poliz::Op::PUSH_INT, value);
+
+            lex.nextLexem();
+            return true;
+        }
+
+        case Token::Type::FloatLiteral: {
+            TypeInfo t = sem.getLiteralType(tok);
+            sem.pushType(t);
+
+            poliz.emit(Poliz::Op::PUSH_FLOAT);
+            lex.nextLexem();
+            return true;
+        }
+
+        case Token::Type::CharLiteral: {
+            TypeInfo t = sem.getLiteralType(tok);
+            sem.pushType(t);
+
+            char ch = tok.lexeme.size() >= 3 ? tok.lexeme[1] : 0;
+            poliz.emit(Poliz::Op::PUSH_CHAR, static_cast<int>(ch));
+
+            lex.nextLexem();
+            return true;
+        }
+
+        case Token::Type::StringLiteral: {
+            TypeInfo t = sem.getLiteralType(tok);
+            sem.pushType(t);
+
+            std::string s = tok.lexeme;
+            if (!s.empty() && s.front() == '"') s.erase(s.begin());
+            if (!s.empty() && s.back()  == '"') s.pop_back();
+
+            int idx = poliz.addString(s);
+            poliz.emit(Poliz::Op::PUSH_STRING, idx);
+
+            lex.nextLexem();
+            return true;
+        }
+
         case Token::Type::KwTrue:
         case Token::Type::KwFalse: {
             TypeInfo t = sem.getLiteralType(tok);
             sem.pushType(t);
+
+            int v = (tok.type == Token::Type::KwTrue ? 1 : 0);
+            poliz.emit(Poliz::Op::PUSH_BOOL, v);
+
             lex.nextLexem();
             return true;
         }
+
         default:
             throw std::runtime_error("expected literal (int, float, char, string, or bool)");
     }
 }
+
+// ===== LValue (пока без POLIZ для переменных — это следующий этап) =====
+// Твой текущий код я оставлю как есть, только не буду пытаться генерить LOAD_VAR/STORE_VAR,
+// чтобы не ломать семантику. Для первой проверки достаточно литералов и выражений.
+// Если хочешь, можем дальше сюда добавить poliz.emit(LOAD_VAR / STORE_VAR).
 
 bool Parser::parseLValue() {
     Token baseTok = lex.currentLexeme();
@@ -322,12 +364,11 @@ bool Parser::parseLValue() {
 
     while (true) {
         if (match(Token::Type::LBracket)) {
-            // массив: a[expr]
             pushVarType();
             lex.nextLexem();
 
             bool isLiteralIndex = (lex.currentLexeme().type == Token::Type::IntegerLiteral);
-            Token indexTok = lex.currentLexeme(); // запомним, если это литерал
+            Token indexTok = lex.currentLexeme();
 
             if (!parseExpression())
                 return false;
@@ -340,19 +381,15 @@ bool Parser::parseLValue() {
             std::optional<int> literalIndex;
 
             if (isLiteralIndex && indexTok.type == Token::Type::IntegerLiteral) {
-                // аккуратно парсим число
                 try {
                     literalIndex = std::stoi(indexTok.lexeme);
-                } catch (...) {
-                    // если вдруг переполнение/мусор — просто не делаем проверку
-                }
+                } catch (...) {}
             }
 
             sem.checkArrayIndex(arr, index, literalIndex);
             hasTypeOnStack = true;
         }
         else if (match(Token::Type::Dot)) {
-            // поле/метод: obj.field или obj.method(...)
             pushVarType();
             lex.nextLexem();
             Token memberTok = lex.currentLexeme();
@@ -360,7 +397,6 @@ bool Parser::parseLValue() {
             std::string memberName = memberTok.lexeme;
 
             if (match(Token::Type::LParen)) {
-                // вызов метода obj.method(...)
                 TypeInfo objType = sem.popType();
                 if (!objType.isClass())
                     throw std::runtime_error("Method call on non-class type");
@@ -370,12 +406,12 @@ bool Parser::parseLValue() {
 
                 expect(Token::Type::LParen, "'(' after method name");
                 if (!match(Token::Type::RParen)) {
-                    if (!parseExpression())
+                    if (!parseAssignmentExpression())
                         return false;
                     sem.addCallArg();
                     while (match(Token::Type::Comma)) {
                         lex.nextLexem();
-                        if (!parseExpression())
+                        if (!parseAssignmentExpression())
                             return false;
                         sem.addCallArg();
                     }
@@ -383,14 +419,12 @@ bool Parser::parseLValue() {
                 expect(Token::Type::RParen, "')' after method call");
                 sem.endMethodCall();
             } else {
-                // просто поле: obj.field
                 TypeInfo objType = sem.popType();
                 sem.checkField(objType, memberName);
             }
             hasTypeOnStack = true;
         }
         else if (match(Token::Type::LParen)) {
-            // вызов функции: f(...)
             if (!hasTypeOnStack) {
                 sem.beginFunctionCall(baseName);
 
@@ -418,7 +452,6 @@ bool Parser::parseLValue() {
         }
     }
 
-    // просто переменная без всего
     if (!hasTypeOnStack) {
         SymbolEntry* sym = sem.lookupVariable(baseName);
         if (!sym)
@@ -429,46 +462,8 @@ bool Parser::parseLValue() {
     return true;
 }
 
-// bool Parser::parseLValueMethod() {
-//     expect(Token::Type::Identifier, "lvalue");
-//     if (match(Token::Type::LBracket)) {
-//         lex.nextLexem();
-//         if (!parseLValueMethod())
-//             return false;
-//         expect(Token::Type::RBracket, "close of array");
-//         return true;
-//     } else if (match(Token::Type::Dot)) {
-//         lex.nextLexem();
-//         expect(Token::Type::Identifier, "method name");
-//         expect(Token::Type::LParen, "'(' for open method");
-//         if (match(Token::Type::RParen)) {
-//             lex.nextLexem();
-//             return true;
-//         } else {
-//             if (!parseExpression())
-//                 return false;
-//             while (match(Token::Type::Comma)) {
-//                 lex.nextLexem();
-//                 expect(Token::Type::Identifier, "method name");
-//             }
-//             expect(Token::Type::RParen, "')' after method");
-//             return true;
-//
-//         }
-//     } else if (match(Token::Type::LParen)) {
-//         lex.nextLexem();
-//         if (!parseExpression())
-//             return false;
-//         while (match(Token::Type::Comma)) {
-//             lex.nextLexem();
-//             if (!parseExpression())
-//                 return false;
-//         }
-//         expect(Token::Type::RParen, "close of function");
-//     }
-//     return true;
-// }
-
+// ===== Block / Statements — без POLIZ (кроме print), пока только семантика =====
+// Можно потом добавить JUMP/JUMP_IF_FALSE и т.п. Сейчас они не нужны для проверки.
 
 bool Parser::parseBlock() {
     expect(Token::Type::LBrace, "'{' to begin block");
@@ -528,7 +523,6 @@ bool Parser::parseStatement() {
     }
 
     throw std::runtime_error("expected statement");
-    return false;
 }
 
 bool Parser::parseDeclarationStatement() {
@@ -567,6 +561,8 @@ bool Parser::parseDeclarationStatement() {
 
     return true;
 }
+
+// ===== if/while/for/return — пока без ПОЛИЗа (для проверки не надо) =====
 
 bool Parser::parseIfStatement() {
     expect(Token::Type::KwIf, "'if'");
@@ -619,10 +615,8 @@ bool Parser::parseForStatement() {
     expect(Token::Type::KwFor, "'for'");
     expect(Token::Type::LParen, "'(' after for");
 
-    // создаём scope для переменной цикла
     sem.enterScope();
 
-    // init: int i = 0
     TypeInfo t = parseTypeSemantic();
 
     Token nameTok = lex.currentLexeme();
@@ -634,30 +628,29 @@ bool Parser::parseForStatement() {
 
     if (!parseExpression())
         return false;
-    sem.popType(); // тип инициализации нас не интересует
+    sem.popType();
 
     expect(Token::Type::Semicolon, "';' after init expression");
 
-    // условие: i < 10
     if (!parseExpression())
         return false;
-    TypeInfo cond = sem.popType();
-    sem.checkIfCondition(cond); // можно даже проверить, что условие логическое/integral
+    {
+        TypeInfo cond = sem.popType();
+        sem.checkIfCondition(cond);
+    }
 
     expect(Token::Type::Semicolon, "';' after logic expression");
 
-    // шаг: i = i + 1
     if (!parseExpression())
         return false;
-    sem.popType(); // тип шага можно игнорировать
+    sem.popType();
 
     expect(Token::Type::RParen, "')' for close for");
 
-    // И ВОТ ТУТ главное: парсим ТЕЛО цикла как statement
     if (!parseStatement())
         return false;
 
-    sem.leaveScope(); // i живёт только внутри for
+    sem.leaveScope();
 
     return true;
 }
@@ -685,6 +678,8 @@ bool Parser::parseReturnStatement() {
     return true;
 }
 
+// ===== print / read — ТУТ ЭМИТИМ PRINT =====
+
 bool Parser::parsePrintStatement() {
     expect(Token::Type::KwPrint, "'print'");
     expect(Token::Type::LParen, "'(' after 'print'");
@@ -694,6 +689,9 @@ bool Parser::parsePrintStatement() {
 
     TypeInfo t = sem.popType();
     sem.checkPrint(t);
+
+    // POLIZ: аргумент уже на стеке
+    poliz.emit(Poliz::Op::PRINT);
 
     expect(Token::Type::RParen, "')' after 'print' argument");
     expect(Token::Type::Semicolon, "';' after 'print(...)'");
@@ -710,16 +708,16 @@ bool Parser::parseReadStatement() {
     TypeInfo t = sem.popType();
     sem.checkRead(t);
 
+    // пока READ не реализуем на уровне байткода
     expect(Token::Type::RParen, "')' after 'read' argument");
     expect(Token::Type::Semicolon, "';' after 'read(...)'");
     return true;
 }
 
+// ===== Выражения =====
 
 bool Parser::parseExpression() {
-    if (!parseCommaExpression())
-        return false;
-    return true;
+    return parseCommaExpression();
 }
 
 bool Parser::parseCommaExpression() {
@@ -730,21 +728,10 @@ bool Parser::parseCommaExpression() {
         lex.nextLexem();
         if (!parseAssignmentExpression())
             return false;
+        // семантика запятых пока неважна, можно не эмитить ничего
     }
     return true;
 }
-
-// bool Parser::parseApostropheExpression() {
-//     if (!parseAssignmentExpression())
-//         return false;
-//
-//     while (lex.currentLexeme().type == Token::Type::Backtick) {
-//         lex.nextLexeme();
-//         if (!parseAssignmentExpression())
-//             return error("expected expression after '`'");
-//     }
-//     return true;
-// }
 
 bool Parser::parseAssignmentExpression() {
     if (!parseLogicalOrExpression())
@@ -760,6 +747,7 @@ bool Parser::parseAssignmentExpression() {
 
         TypeInfo right = sem.popType();
         sem.checkAssignment(left, right);
+        // Пока не эмитим STORE_VAR, это следующий шаг
     }
 
     return true;
@@ -775,6 +763,7 @@ bool Parser::parseLogicalOrExpression() {
         if (!parseLogicalAndExpression())
             return false;
         sem.checkBinaryOp(op.type);
+        // можно позже добавить poliz.emit(LOG_OR)
     }
     return true;
 }
@@ -789,6 +778,7 @@ bool Parser::parseLogicalAndExpression() {
         if (!parseBitwiseOrExpression())
             return false;
         sem.checkBinaryOp(op.type);
+        // poliz.emit(LOG_AND);
     }
     return true;
 }
@@ -803,6 +793,7 @@ bool Parser::parseBitwiseOrExpression() {
         if (!parseBitwiseXorExpression())
             return false;
         sem.checkBinaryOp(op.type);
+        // poliz.emit( ... );
     }
     return true;
 }
@@ -835,6 +826,8 @@ bool Parser::parseBitwiseAndExpression() {
     return true;
 }
 
+// ===== СРАВНЕНИЯ (пока только семантика, можно потом добавить CMP_*) =====
+
 bool Parser::parseEqualityExpression() {
     if (!parseRelationalExpression())
         return false;
@@ -862,9 +855,11 @@ bool Parser::parseRelationalExpression() {
         if (!parseShiftExpression())
             return false;
         sem.checkBinaryOp(op.type);
-           }
+    }
     return true;
 }
+
+// ===== Сдвиги / арифметика =====
 
 bool Parser::parseShiftExpression() {
     if (!parseAdditiveExpression())
@@ -876,9 +871,12 @@ bool Parser::parseShiftExpression() {
         if (!parseAdditiveExpression())
             return false;
         sem.checkBinaryOp(op.type);
+        // poliz.emit(...);
     }
     return true;
 }
+
+// ТУТ ТВОЙ ПЕРВЫЙ ПОЛНОЦЕННЫЙ ПОЛИЗ ДЛЯ АРИФМЕТИКИ
 
 bool Parser::parseAdditiveExpression() {
     if (!parseMultiplicativeExpression())
@@ -889,7 +887,19 @@ bool Parser::parseAdditiveExpression() {
         lex.nextLexem();
         if (!parseMultiplicativeExpression())
             return false;
+
         sem.checkBinaryOp(op.type);
+
+        switch (op.type) {
+            case Token::Type::Plus:
+                poliz.emit(Poliz::Op::ADD);
+                break;
+            case Token::Type::Minus:
+                poliz.emit(Poliz::Op::SUB);
+                break;
+            default:
+                break;
+        }
     }
     return true;
 }
@@ -905,8 +915,23 @@ bool Parser::parseMultiplicativeExpression() {
         lex.nextLexem();
         if (!parseUnaryExpression())
             return false;
+
         sem.checkBinaryOp(op.type);
-           }
+
+        switch (op.type) {
+            case Token::Type::Asterisk:
+                poliz.emit(Poliz::Op::MUL);
+                break;
+            case Token::Type::Slash:
+                poliz.emit(Poliz::Op::DIV);
+                break;
+            case Token::Type::Percent:
+                poliz.emit(Poliz::Op::MOD);
+                break;
+            default:
+                break;
+        }
+    }
     return true;
 }
 
@@ -920,14 +945,31 @@ bool Parser::parseUnaryExpression() {
            match(Token::Type::Tilde)) {
         ops.push_back(lex.currentLexeme().type);
         lex.nextLexem();
-           }
+    }
 
     if (!parsePrimaryExpression())
         return false;
 
-    // применяем унарные операторы справа налево
     for (auto it = ops.rbegin(); it != ops.rend(); ++it) {
         sem.checkUnaryOp(*it);
+
+        switch (*it) {
+            case Token::Type::Minus:
+                poliz.emit(Poliz::Op::NEG);
+                break;
+            case Token::Type::Exclamation:
+                poliz.emit(Poliz::Op::NOT);
+                break;
+            case Token::Type::Tilde:
+                poliz.emit(Poliz::Op::BNOT);
+                break;
+            case Token::Type::PlusPlus:
+            case Token::Type::MinusMinus:
+                // пока не реализуем ++/-- в ПОЛИЗ
+                break;
+            default:
+                break;
+        }
     }
 
     return true;

@@ -3,23 +3,19 @@
 #include <string>
 #include <iostream>
 
-// Стековый байткод для твоего языка
 class Poliz {
 public:
-    // ---------------------------
-    // Опкоды виртуальной машины
-    // ---------------------------
     enum class Op {
         // Литералы / константы
-        PUSH_INT,      // arg1: значение
-        PUSH_FLOAT,    // arg1: индекс в пуле констант/пока можно не использовать
-        PUSH_CHAR,     // arg1: символ (char)
-        PUSH_BOOL,     // arg1: 0 или 1
-        PUSH_STRING,   // arg1: индекс в stringPool
+        PUSH_INT,
+        PUSH_FLOAT,
+        PUSH_CHAR,
+        PUSH_BOOL,
+        PUSH_STRING,
 
-        // Работа с переменными
-        LOAD_VAR,      // arg1: индекс переменной
-        STORE_VAR,     // arg1: индекс переменной
+        // Переменные (позже прикрутим)
+        LOAD_VAR,
+        STORE_VAR,
 
         // Арифметика
         ADD,
@@ -29,9 +25,9 @@ public:
         MOD,
 
         // Унарные
-        NEG,           // -x
-        NOT,           // !x
-        BNOT,          // ~x
+        NEG,    // -x
+        NOT,    // !x
+        BNOT,   // ~x
 
         // Сравнение
         CMP_EQ,
@@ -41,80 +37,59 @@ public:
         CMP_GT,
         CMP_GE,
 
-        // Логика (можно реализовать и через CMP + bool, но пусть будут)
+        // Логика
         LOG_AND,
         LOG_OR,
 
-        // Переходы
-        JUMP,          // arg1: адрес
-        JUMP_IF_FALSE, // arg1: адрес
+        // Переходы (понадобятся позже для if/while/for)
+        JUMP,
+        JUMP_IF_FALSE,
 
-        // Функции
-        CALL,          // arg1: индекс функции (или адрес)
-        RET,           // без аргументов
+        // Функции (тоже позже)
+        CALL,
+        RET,
 
         // Ввод/вывод
-        PRINT,         // печатает вершину стека
-        READ,          // читает в вершину стека / позже уточним
+        PRINT,
+        READ,
 
         // Служебное
         NOP,
         HALT
     };
 
-    // Одна инструкция байткода
     struct Instr {
-        Op   op;
-        int  arg1;   // первый аргумент (индекс, смещение, значение)
-        int  arg2;   // запасной аргумент, на будущее (можно не использовать)
+        Op  op;
+        int arg1;
+        int arg2;
 
-        Instr(Op op_, int a1 = 0, int a2 = 0)
-            : op(op_), arg1(a1), arg2(a2) {}
+        Instr(Op o, int a1 = 0, int a2 = 0)
+            : op(o), arg1(a1), arg2(a2) {}
     };
 
 private:
-    std::vector<Instr> code;
+    std::vector<Instr>       code;
     std::vector<std::string> stringPool;
 
 public:
-    // ---------------------------
     // Добавление инструкций
-    // ---------------------------
-
-    // Просто добавить инструкцию, вернуть её индекс
     int emit(Op op, int arg1 = 0, int arg2 = 0);
-
-    // Зарезервировать прыжок с ещё неизвестной целью.
-    // Возвращает индекс инструкции, чтобы потом допатчить.
-    int emitJump(Op op);
-
-    // Дописать адрес прыжка в уже сгенерированную инструкцию
+    int emitJump(Op op);                    // JUMP / JUMP_IF_FALSE с placeholder
     void patchJump(int instrIndex, int targetIp);
 
-    // ---------------------------
-    // Работа со строковыми литералами
-    // ---------------------------
-
-    // Положить строку в пул и вернуть её индекс
+    // Строковый пул
     int addString(const std::string& s);
-
     const std::string& getString(int idx) const;
 
-    // ---------------------------
     // Доступ к коду
-    // ---------------------------
-
     const Instr& operator[](std::size_t i) const { return code[i]; }
     Instr&       operator[](std::size_t i)       { return code[i]; }
 
-    std::size_t size() const { return code.size(); }
+    std::size_t size()  const { return code.size(); }
     bool        empty() const { return code.empty(); }
 
-    // Текущая "адрес" следующей инструкции
     int currentIp() const { return static_cast<int>(code.size()); }
 
-    // ---------------------------
     // Отладочный вывод
-    // ---------------------------
     void dump(std::ostream& os) const;
 };

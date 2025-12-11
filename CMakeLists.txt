@@ -12,4 +12,6 @@ add_executable(TranslatorLexer
         parser.cpp
         semanter.cpp
         poliz.cpp
+        vm.cpp
+        vm.hpp
         )
