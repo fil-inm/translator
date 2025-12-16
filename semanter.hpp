@@ -113,34 +113,32 @@ struct SymbolEntry {
     std::string name;
     TypeInfo    type;
     bool        isConst;
-    int         scopeLevel;
+    int         slot;
 
-    SymbolEntry(const std::string& n, const TypeInfo& t, bool c, int sl)
-        : name(n), type(t), isConst(c), scopeLevel(sl) {}
+    SymbolEntry(const std::string& n,
+                const TypeInfo& t,
+                bool c,
+                int s)
+        : name(n), type(t), isConst(c), slot(s) {}
 };
 
 class TID {
 private:
     std::unordered_map<std::string, SymbolEntry> table;
-    int scope;
 
 public:
-    TID(int lvl) : scope(lvl) {}
-
-    bool insert(const std::string& name, const TypeInfo& t, bool isConst = false) {
+    bool insert(const std::string& name,
+                const TypeInfo& type,
+                bool isConst,
+                int slot) {
         if (table.contains(name)) return false;
-        table.emplace(name, SymbolEntry(name, t, isConst, scope));
+        table.emplace(name, SymbolEntry(name, type, isConst, slot));
         return true;
     }
 
     SymbolEntry* find(const std::string& name) {
         auto it = table.find(name);
-        return (it == table.end() ? nullptr : &it->second);
-    }
-
-    const SymbolEntry* find(const std::string& name) const {
-        auto it = table.find(name);
-        return (it == table.end() ? nullptr : &it->second);
+        return it == table.end() ? nullptr : &it->second;
     }
 };
 
@@ -214,12 +212,17 @@ private:
 
     std::vector<CallContext> callStack;
 
+    int nextSlot = 0;
+
 public:
     Semanter();
 
     // области видимости
     void enterScope();
     void leaveScope();
+
+    void enterFunctionScope();
+
     TID* currentTID();
 
     // переменные

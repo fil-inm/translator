@@ -1,28 +1,8 @@
-class Cat {
-    int lives;
-
-    constructor() {
-        lives = 9;
-    }
-
-
-
-    void meow() {
-        print(1);
-    }
-
-    void dieOnce() {
-        lives = lives - 1;
-        if (lives <= 0){
-            print(100);}
-    }
-}
-
 main() {
-    Cat kitty;
-    kitty.meow();
-    for (int i = 0; i < 3; ++i) {
-        kitty.dieOnce();
+    string s;
+    print("Enter your name:");
+    read(s);
+    print("Hello");
+    print(s);
+    print("!");
     }
-    return 0;
-}

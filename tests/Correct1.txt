@@ -38,10 +38,13 @@ main() {
 
 
     int a[10];
-    a[1] = 5;
+    a[1] = add(5, 8);
+    a[0] = 56 + 'h';
     float qwe;
     qwe = 12.4;
-    z = a[1];
+    z = a[z];
+    int add;
+    z = false&&z;
 
     if (x > 5) {
         print("x is greater than 5");
@@ -54,7 +57,8 @@ main() {
     while (x > 0) {
         x = x - 1;
     }
-
+Person Person;
+Person.setAge(4);
     bool flag;
     flag = true;
     if (flag) {

@@ -5,6 +5,25 @@
 #include <string>
 #include <unordered_set>
 
+
+struct LValueDesc {
+    enum class Kind {
+        Var,        // обычная переменная
+        ArrayElem,  // a[i]
+        Field       // a.b
+    } kind;
+
+    SymbolEntry* base;      // переменная a
+    std::string  field;    // имя поля (если Field)
+};
+
+struct LoopCtx {
+    int start;
+    std::vector<int> breaks;
+    std::vector<int> continues;
+};
+
+
 class Parser {
 public:
     explicit Parser(Lexer& lexer, Semanter& semanter, Poliz& poliz);
@@ -14,8 +33,12 @@ public:
 private:
     Lexer& lex;
     Semanter& sem;
-    Poliz&   poliz;     // ← вот он
+    Poliz&   poliz;
     int errLine = 0, errCol = 0;
+
+    std::optional<LValueDesc> lastLValue;
+    std::vector<LoopCtx> loopStack;
+
 
     std::string currentFunctionName;
     bool        hasCurrentFunction = false;
@@ -71,4 +94,8 @@ private:
     bool parseMultiplicativeExpression();
     bool parseUnaryExpression();
     bool parsePrimaryExpression();
+
+    void emitLoadFromLValue(const LValueDesc &lv);
+
+    void emitStoreToLValue(const LValueDesc &lv);
 };

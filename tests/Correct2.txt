@@ -1,3 +1,54 @@
 main() {
-    print(2 + 3 * 4);
+int a;
+int b;
+int c;
+float q;
+q=2.5;
+
+a = 1 + 2 * 3;          // 7
+b = a << 1;             // 14
+c = (b | 2) ^ 3;        // (14 | 2)=14 ^3 = 13
+q = q*a;
+
+print(a);
+print(b);
+print(c);
+if(c>q){
+print("true");
+} else{
+print("false");
+}
+
+print(a < 10 && c == 13);
+print(q);
+
+int i;
+int sum;
+sum = 0;
+
+
+    for (i=0; i < 10; i = i + 1) {
+           if (i % 2 == 0) {
+
+
+           print("не учтено");
+           print(i);
+               continue;   // пропускаем чётные
+           }
+           sum = sum + i;
+       }
+
+       print(sum);   // 1+3+5+7+9 = 25
+
+    // ===== while + break =====
+    int x;
+        x = 0;
+        while (true) {
+            x = x + 1;
+            if (x == 5) {
+                break;
+            }
+        }
+
+        print(x);     // 5
 }

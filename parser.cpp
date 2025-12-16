@@ -116,7 +116,7 @@ bool Parser::parseConstructor() {
     std::string ctorName = currentClassName + "_ctor";
     sem.addConstructor(currentClassName, ctorName);
 
-    sem.enterScope();
+sem.enterFunctionScope();
     if (!parseParameters())
         return false;
 
@@ -147,7 +147,7 @@ bool Parser::parseFunction() {
         sem.declareFunction(fname, uniq, retType);
     }
 
-    sem.enterScope();
+    sem.enterFunctionScope();
     if (!parseParameters()) return false;
     if (!parseBlock())     return false;
     sem.leaveScope();
@@ -209,7 +209,7 @@ bool Parser::parseMain() {
 
     sem.declareFunction("main", "main", currentReturnType);
 
-    sem.enterScope();
+sem.enterFunctionScope();
     if (!parseParameters())
         return false;
 
@@ -292,7 +292,15 @@ bool Parser::parseLiteral() {
             TypeInfo t = sem.getLiteralType(tok);
             sem.pushType(t);
 
-            poliz.emit(Poliz::Op::PUSH_FLOAT);
+            float value = std::stof(tok.lexeme);
+
+            int bits;
+            static_assert(sizeof(float) == sizeof(int),
+                          "float and int must be same size");
+            std::memcpy(&bits, &value, sizeof(float));
+
+            poliz.emit(Poliz::Op::PUSH_FLOAT, bits);
+
             lex.nextLexem();
             return true;
         }
@@ -350,114 +358,58 @@ bool Parser::parseLValue() {
     expect(Token::Type::Identifier, "identifier");
     std::string baseName = baseTok.lexeme;
 
-    bool hasTypeOnStack = false;
+    SymbolEntry* baseSym = sem.lookupVariable(baseName);
+    if (!baseSym)
+        throw std::runtime_error("Unknown identifier '" + baseName + "'");
 
-    auto pushVarType = [&]() {
-        if (!hasTypeOnStack) {
-            SymbolEntry* sym = sem.lookupVariable(baseName);
-            if (!sym)
-                throw std::runtime_error("Unknown identifier '" + baseName + "'");
-            sem.pushType(sym->type);
-            hasTypeOnStack = true;
-        }
-    };
+    // Изначально это просто переменная
+    LValueDesc lval;
+    lval.kind = LValueDesc::Kind::Var;
+    lval.base = baseSym;
+
+    TypeInfo currentType = baseSym->type;
 
     while (true) {
+        // ---------- a[i] ----------
         if (match(Token::Type::LBracket)) {
-            pushVarType();
             lex.nextLexem();
-
-            bool isLiteralIndex = (lex.currentLexeme().type == Token::Type::IntegerLiteral);
-            Token indexTok = lex.currentLexeme();
 
             if (!parseExpression())
                 return false;
 
-            expect(Token::Type::RBracket, "']' after index");
-
             TypeInfo index = sem.popType();
-            TypeInfo arr   = sem.popType();
+            sem.checkArrayIndex(currentType, index, std::nullopt);
 
-            std::optional<int> literalIndex;
+            expect(Token::Type::RBracket, "']'");
 
-            if (isLiteralIndex && indexTok.type == Token::Type::IntegerLiteral) {
-                try {
-                    literalIndex = std::stoi(indexTok.lexeme);
-                } catch (...) {}
-            }
-
-            sem.checkArrayIndex(arr, index, literalIndex);
-            hasTypeOnStack = true;
+            // теперь lvalue — элемент массива
+            lval.kind = LValueDesc::Kind::ArrayElem;
+            currentType = *currentType.elementType;
         }
+
+        // ---------- a.b ----------
         else if (match(Token::Type::Dot)) {
-            pushVarType();
             lex.nextLexem();
             Token memberTok = lex.currentLexeme();
             expect(Token::Type::Identifier, "member name");
-            std::string memberName = memberTok.lexeme;
 
-            if (match(Token::Type::LParen)) {
-                TypeInfo objType = sem.popType();
-                if (!objType.isClass())
-                    throw std::runtime_error("Method call on non-class type");
-                std::string cn = objType.className;
+            sem.checkField(currentType, memberTok.lexeme);
 
-                sem.beginMethodCall(cn, memberName);
-
-                expect(Token::Type::LParen, "'(' after method name");
-                if (!match(Token::Type::RParen)) {
-                    if (!parseAssignmentExpression())
-                        return false;
-                    sem.addCallArg();
-                    while (match(Token::Type::Comma)) {
-                        lex.nextLexem();
-                        if (!parseAssignmentExpression())
-                            return false;
-                        sem.addCallArg();
-                    }
-                }
-                expect(Token::Type::RParen, "')' after method call");
-                sem.endMethodCall();
-            } else {
-                TypeInfo objType = sem.popType();
-                sem.checkField(objType, memberName);
-            }
-            hasTypeOnStack = true;
+            lval.kind  = LValueDesc::Kind::Field;
+            lval.field = memberTok.lexeme;
+            currentType = sem.peekType();
         }
-        else if (match(Token::Type::LParen)) {
-            if (!hasTypeOnStack) {
-                sem.beginFunctionCall(baseName);
 
-                expect(Token::Type::LParen, "'(' after function name");
-                if (!match(Token::Type::RParen)) {
-                    if (!parseAssignmentExpression())
-                        return false;
-                    sem.addCallArg();
-                    while (match(Token::Type::Comma)) {
-                        lex.nextLexem();
-                        if (!parseAssignmentExpression())
-                            return false;
-                        sem.addCallArg();
-                    }
-                }
-                expect(Token::Type::RParen, "')' after function call");
-                sem.endFunctionCall();
-                hasTypeOnStack = true;
-            } else {
-                throw std::runtime_error("Calls on non-function values are not supported");
-            }
-        }
         else {
             break;
         }
     }
 
-    if (!hasTypeOnStack) {
-        SymbolEntry* sym = sem.lookupVariable(baseName);
-        if (!sym)
-            throw std::runtime_error("Unknown identifier '" + baseName + "'");
-        sem.pushType(sym->type);
-    }
+    // 🔥 СОХРАНЯЕМ LVALUE
+    lastLValue = lval;
+
+    // 🔥 КЛАДЁМ ТОЛЬКО ТИП
+    sem.pushType(currentType);
 
     return true;
 }
@@ -498,13 +450,17 @@ bool Parser::parseStatement() {
 
     if (match(Token::Type::KwBreak)) {
         lex.nextLexem();
-        expect(Token::Type::Semicolon, "';' after break");
+        int j = poliz.emitJump(Poliz::Op::JUMP);
+        loopStack.back().breaks.push_back(j);
+        expect(Token::Type::Semicolon, "';'");
         return true;
     }
 
     if (match(Token::Type::KwContinue)) {
         lex.nextLexem();
-        expect(Token::Type::Semicolon, "';' after continue");
+        int j = poliz.emitJump(Poliz::Op::JUMP);
+        loopStack.back().continues.push_back(j);
+        expect(Token::Type::Semicolon, "';'");
         return true;
     }
 
@@ -566,28 +522,33 @@ bool Parser::parseDeclarationStatement() {
 
 bool Parser::parseIfStatement() {
     expect(Token::Type::KwIf, "'if'");
-    expect(Token::Type::LParen, "'(' after 'if'");
+    expect(Token::Type::LParen, "'('");
 
-    if (!parseExpression())
-        return false;
-
+    parseExpression();
     TypeInfo cond = sem.popType();
     sem.checkIfCondition(cond);
 
-    expect(Token::Type::RParen, "')' after 'if' condition");
+    expect(Token::Type::RParen, "')'");
 
-    if (!parseBlock())
-        return false;
+    int jf = poliz.emitJump(Poliz::Op::JUMP_IF_FALSE);
+
+    parseBlock();
+
+    int jend = -1;
 
     if (match(Token::Type::KwElse)) {
+        jend = poliz.emitJump(Poliz::Op::JUMP);
+        poliz.patchJump(jf, poliz.currentIp());
+
         lex.nextLexem();
-        if (match(Token::Type::KwIf)) {
-            if (!parseIfStatement())
-                return false;
-        } else {
-            if (!parseBlock())
-                return false;
-        }
+        if (match(Token::Type::KwIf))
+            parseIfStatement();
+        else
+            parseBlock();
+
+        poliz.patchJump(jend, poliz.currentIp());
+    } else {
+        poliz.patchJump(jf, poliz.currentIp());
     }
 
     return true;
@@ -595,63 +556,104 @@ bool Parser::parseIfStatement() {
 
 bool Parser::parseWhileStatement() {
     expect(Token::Type::KwWhile, "'while'");
-    expect(Token::Type::LParen, "'(' after 'while'");
+    expect(Token::Type::LParen, "'('");
 
-    if (!parseExpression())
-        return false;
+    int start = poliz.currentIp();
 
+    parseExpression();
     TypeInfo cond = sem.popType();
     sem.checkIfCondition(cond);
 
-    expect(Token::Type::RParen, "')' after 'while' condition");
+    expect(Token::Type::RParen, "')'");
 
-    if (!parseBlock())
-        return false;
+    int jf = poliz.emitJump(Poliz::Op::JUMP_IF_FALSE);
 
+    loopStack.push_back({start});
+
+    parseBlock();
+
+    poliz.emit(Poliz::Op::JUMP, start);
+    poliz.patchJump(jf, poliz.currentIp());
+
+    for (int b : loopStack.back().breaks)
+        poliz.patchJump(b, poliz.currentIp());
+
+    for (int c : loopStack.back().continues)
+        poliz.patchJump(c, start);
+
+    loopStack.pop_back();
     return true;
 }
 
 bool Parser::parseForStatement() {
     expect(Token::Type::KwFor, "'for'");
-    expect(Token::Type::LParen, "'(' after for");
+    expect(Token::Type::LParen, "'('");
 
-    sem.enterScope();
 
-    TypeInfo t = parseTypeSemantic();
+    // ---------- init ----------
+    if (!match(Token::Type::Semicolon)) {
+        if (!parseExpression()) return false;
+        sem.popType(); // результат init не нужен
+    }
+    expect(Token::Type::Semicolon, "';' after init");
 
-    Token nameTok = lex.currentLexeme();
-    expect(Token::Type::Identifier, "name of variable");
-    std::string name = nameTok.lexeme;
-    sem.declareVariable(name, t);
+    // ---------- condition ----------
+    int condPos = poliz.currentIp();
 
-    expect(Token::Type::Assign, "sign =");
-
-    if (!parseExpression())
-        return false;
-    sem.popType();
-
-    expect(Token::Type::Semicolon, "';' after init expression");
-
-    if (!parseExpression())
-        return false;
-    {
+    if (!match(Token::Type::Semicolon)) {
+        if (!parseExpression()) return false;
         TypeInfo cond = sem.popType();
         sem.checkIfCondition(cond);
+    } else {
+        // пустое условие = true
+        poliz.emit(Poliz::Op::PUSH_BOOL, 1);
     }
 
-    expect(Token::Type::Semicolon, "';' after logic expression");
+    int jf = poliz.emitJump(Poliz::Op::JUMP_IF_FALSE);
+    expect(Token::Type::Semicolon, "';' after condition");
 
-    if (!parseExpression())
-        return false;
-    sem.popType();
+    // ---------- jump over iter to body (важный хак) ----------
+    int jToBody = poliz.emitJump(Poliz::Op::JUMP);
 
-    expect(Token::Type::RParen, "')' for close for");
+    // ---------- iteration code position ----------
+    int iterPos = poliz.currentIp();
 
-    if (!parseStatement())
-        return false;
+    if (!match(Token::Type::RParen)) {
+        if (!parseExpression()) return false;
+        sem.popType(); // результат iter не нужен
+    }
 
-    sem.leaveScope();
+    expect(Token::Type::RParen, "')' after for");
 
+    // после iter надо снова проверить условие
+    poliz.emit(Poliz::Op::JUMP, condPos);
+
+    // ---------- body ----------
+    int bodyPos = poliz.currentIp();
+    poliz.patchJump(jToBody, bodyPos);
+
+    loopStack.push_back({});
+    // continue должен идти в iter
+
+
+    if (!parseStatement()) return false;
+
+    // после тела -> iter
+    poliz.emit(Poliz::Op::JUMP, iterPos);
+
+    // ---------- end ----------
+    int endPos = poliz.currentIp();
+    poliz.patchJump(jf, endPos);
+
+    // break -> end
+    for (int b : loopStack.back().breaks)
+        poliz.patchJump(b, endPos);
+
+    // continue -> iter
+    for (int c : loopStack.back().continues)
+        poliz.patchJump(c, iterPos);
+
+    loopStack.pop_back();
     return true;
 }
 
@@ -700,7 +702,7 @@ bool Parser::parsePrintStatement() {
 
 bool Parser::parseReadStatement() {
     expect(Token::Type::KwRead, "'read'");
-    expect(Token::Type::LParen, "'(' after 'read'");
+    expect(Token::Type::LParen, "'('");
 
     if (!parseLValue())
         return false;
@@ -708,9 +710,30 @@ bool Parser::parseReadStatement() {
     TypeInfo t = sem.popType();
     sem.checkRead(t);
 
-    // пока READ не реализуем на уровне байткода
-    expect(Token::Type::RParen, "')' after 'read' argument");
-    expect(Token::Type::Semicolon, "';' after 'read(...)'");
+    switch (t.baseType) {
+        case Token::Type::KwInt:
+            poliz.emit(Poliz::Op::READ_INT);
+            break;
+        case Token::Type::KwFloat:
+            poliz.emit(Poliz::Op::READ_FLOAT);
+            break;
+        case Token::Type::KwBool:
+            poliz.emit(Poliz::Op::READ_BOOL);
+            break;
+        case Token::Type::KwChar:
+            poliz.emit(Poliz::Op::READ_CHAR);
+            break;
+        default:
+            poliz.emit(Poliz::Op::READ_STRING);
+            break;
+    }
+
+    emitStoreToLValue(*lastLValue);
+    lastLValue.reset();
+
+    expect(Token::Type::RParen, "')'");
+    expect(Token::Type::Semicolon, "';'");
+
     return true;
 }
 
@@ -738,16 +761,22 @@ bool Parser::parseAssignmentExpression() {
         return false;
 
     if (match(Token::Type::Assign)) {
-        TypeInfo left = sem.popType();
+        if (!lastLValue)
+            throw std::runtime_error("Left side is not assignable");
 
-        expect(Token::Type::Assign, "= in assignment");
+        LValueDesc target = *lastLValue;
+        lastLValue.reset();
+
+        TypeInfo left = sem.popType();
+        expect(Token::Type::Assign, "=");
 
         if (!parseAssignmentExpression())
             return false;
 
         TypeInfo right = sem.popType();
         sem.checkAssignment(left, right);
-        // Пока не эмитим STORE_VAR, это следующий шаг
+
+        emitStoreToLValue(target);
     }
 
     return true;
@@ -760,10 +789,12 @@ bool Parser::parseLogicalOrExpression() {
     while (match(Token::Type::PipePipe)) {
         Token op = lex.currentLexeme();
         lex.nextLexem();
+
         if (!parseLogicalAndExpression())
             return false;
+
         sem.checkBinaryOp(op.type);
-        // можно позже добавить poliz.emit(LOG_OR)
+        poliz.emit(Poliz::Op::LOG_OR);
     }
     return true;
 }
@@ -775,10 +806,12 @@ bool Parser::parseLogicalAndExpression() {
     while (match(Token::Type::AmpAmp)) {
         Token op = lex.currentLexeme();
         lex.nextLexem();
+
         if (!parseBitwiseOrExpression())
             return false;
+
         sem.checkBinaryOp(op.type);
-        // poliz.emit(LOG_AND);
+        poliz.emit(Poliz::Op::LOG_AND);
     }
     return true;
 }
@@ -790,10 +823,12 @@ bool Parser::parseBitwiseOrExpression() {
     while (match(Token::Type::VerticalBar)) {
         Token op = lex.currentLexeme();
         lex.nextLexem();
+
         if (!parseBitwiseXorExpression())
             return false;
+
         sem.checkBinaryOp(op.type);
-        // poliz.emit( ... );
+        poliz.emit(Poliz::Op::OR); // если нет — добавь
     }
     return true;
 }
@@ -805,9 +840,12 @@ bool Parser::parseBitwiseXorExpression() {
     while (match(Token::Type::Caret)) {
         Token op = lex.currentLexeme();
         lex.nextLexem();
+
         if (!parseBitwiseAndExpression())
             return false;
+
         sem.checkBinaryOp(op.type);
+        poliz.emit(Poliz::Op::XOR);
     }
     return true;
 }
@@ -819,9 +857,12 @@ bool Parser::parseBitwiseAndExpression() {
     while (match(Token::Type::Ampersand)) {
         Token op = lex.currentLexeme();
         lex.nextLexem();
+
         if (!parseEqualityExpression())
             return false;
+
         sem.checkBinaryOp(op.type);
+        poliz.emit(Poliz::Op::AND);
     }
     return true;
 }
@@ -835,9 +876,15 @@ bool Parser::parseEqualityExpression() {
     while (match(Token::Type::EqualEqual) || match(Token::Type::NotEqual)) {
         Token op = lex.currentLexeme();
         lex.nextLexem();
+
         if (!parseRelationalExpression())
             return false;
+
         sem.checkBinaryOp(op.type);
+
+        poliz.emit(op.type == Token::Type::EqualEqual
+                   ? Poliz::Op::CMP_EQ
+                   : Poliz::Op::CMP_NE);
     }
     return true;
 }
@@ -850,12 +897,23 @@ bool Parser::parseRelationalExpression() {
            match(Token::Type::Greater) ||
            match(Token::Type::LessEqual) ||
            match(Token::Type::GreaterEqual)) {
+
         Token op = lex.currentLexeme();
         lex.nextLexem();
+
         if (!parseShiftExpression())
             return false;
+
         sem.checkBinaryOp(op.type);
-    }
+
+        switch (op.type) {
+            case Token::Type::Less:         poliz.emit(Poliz::Op::CMP_LT); break;
+            case Token::Type::Greater:      poliz.emit(Poliz::Op::CMP_GT); break;
+            case Token::Type::LessEqual:    poliz.emit(Poliz::Op::CMP_LE); break;
+            case Token::Type::GreaterEqual: poliz.emit(Poliz::Op::CMP_GE); break;
+            default: break;
+        }
+           }
     return true;
 }
 
@@ -868,10 +926,14 @@ bool Parser::parseShiftExpression() {
     while (match(Token::Type::Shl) || match(Token::Type::Shr)) {
         Token op = lex.currentLexeme();
         lex.nextLexem();
+
         if (!parseAdditiveExpression())
             return false;
+
         sem.checkBinaryOp(op.type);
-        // poliz.emit(...);
+        poliz.emit(op.type == Token::Type::Shl
+                   ? Poliz::Op::SHL
+                   : Poliz::Op::SHR);
     }
     return true;
 }
@@ -978,14 +1040,52 @@ bool Parser::parseUnaryExpression() {
 bool Parser::parsePrimaryExpression() {
     if (match(Token::Type::LParen)) {
         lex.nextLexem();
-        if (!parseExpression())
-            return false;
-        expect(Token::Type::RParen, "')' after expression");
+        parseExpression();
+        expect(Token::Type::RParen, ")");
         return true;
     }
 
-    if (match(Token::Type::Identifier))
-        return parseLValue();
+    if (match(Token::Type::Identifier)) {
+        parseLValue();
+
+        if (!match(Token::Type::Assign)) {
+            emitLoadFromLValue(*lastLValue);
+            lastLValue.reset();
+        }
+        return true;
+    }
 
     return parseLiteral();
+}
+
+void Parser::emitLoadFromLValue(const LValueDesc& lv) {
+    switch (lv.kind) {
+        case LValueDesc::Kind::Var:
+            poliz.emit(Poliz::Op::LOAD_VAR, lv.base->slot);
+            break;
+
+        case LValueDesc::Kind::ArrayElem:
+            // позже: LOAD_ELEM
+            throw std::runtime_error("Array load not implemented yet");
+
+        case LValueDesc::Kind::Field:
+            // позже: LOAD_FIELD
+            throw std::runtime_error("Field load not implemented yet");
+    }
+}
+
+void Parser::emitStoreToLValue(const LValueDesc& lv) {
+    switch (lv.kind) {
+        case LValueDesc::Kind::Var:
+            poliz.emit(Poliz::Op::STORE_VAR, lv.base->slot);
+            break;
+
+        case LValueDesc::Kind::ArrayElem:
+            // STORE_ELEM
+            throw std::runtime_error("Array store not implemented yet");
+
+        case LValueDesc::Kind::Field:
+            // STORE_FIELD
+            throw std::runtime_error("Field store not implemented yet");
+    }
 }

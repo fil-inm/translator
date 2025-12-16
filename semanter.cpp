@@ -9,7 +9,7 @@ Semanter::Semanter() : scopeLevel(0), currentClass("") {
 
 void Semanter::enterScope() {
     ++scopeLevel;
-    tidStack.push_back(std::make_unique<TID>(scopeLevel));
+    tidStack.push_back(std::make_unique<TID>());
 }
 
 void Semanter::leaveScope() {
@@ -19,39 +19,48 @@ void Semanter::leaveScope() {
     }
 }
 
-TID* Semanter::currentTID() {
+void Semanter::enterFunctionScope() {
+    scopeLevel = 0;
+    nextSlot = 0;
+    tidStack.clear();
+    tidStack.push_back(std::make_unique<TID>());
+}
+
+TID *Semanter::currentTID() {
     return tidStack.empty() ? nullptr : tidStack.back().get();
 }
 
-// ============================================================
-// Переменные
-// ============================================================
+bool Semanter::declareVariable(const std::string &name,
+                               const TypeInfo &type,
+                               bool isConst) {
+    if (tidStack.empty())
+        return false;
 
-bool Semanter::declareVariable(const std::string& name, const TypeInfo& type, bool isConst) {
-    if (tidStack.empty()) return false;
-    if (!tidStack.back()->insert(name, type, isConst)) {
-        throw std::runtime_error("Переменная '" + name + "' уже объявлена");
+    int slot = nextSlot++;
+
+    if (!tidStack.back()->insert(name, type, isConst, slot)) {
+        throw std::runtime_error(
+            "Переменная '" + name + "' уже объявлена"
+        );
     }
     return true;
 }
 
-bool Semanter::declareArray(const std::string& name, const TypeInfo& t, int size) {
+bool Semanter::declareArray(const std::string &name, const TypeInfo &t, int size) {
     if (size <= 0 && size != -1)
         throw std::runtime_error("Размер массива должен быть >0 или -1");
     TypeInfo arr = TypeInfo::makeArray(t, size);
     return declareVariable(name, arr);
 }
 
-SymbolEntry* Semanter::lookupVariable(const std::string& name) {
-    // искать в локальных областях
+SymbolEntry *Semanter::lookupVariable(const std::string &name) {
     for (int i = static_cast<int>(tidStack.size()) - 1; i >= 0; --i) {
-        SymbolEntry* s = tidStack[i]->find(name);
+        SymbolEntry *s = tidStack[i]->find(name);
         if (s) return s;
     }
 
-    // если есть currentClass — искать среди полей класса
     if (!currentClass.empty()) {
-        ClassEntry* c = lookupClass(currentClass);
+        ClassEntry *c = lookupClass(currentClass);
         if (!c)
             throw std::runtime_error("Internal error: currentClass установлен, но класс не найден");
         auto it = c->fields.find(name);
@@ -62,11 +71,8 @@ SymbolEntry* Semanter::lookupVariable(const std::string& name) {
     return nullptr;
 }
 
-// ============================================================
-// Типовой стек
-// ============================================================
 
-void Semanter::pushType(const TypeInfo& t) {
+void Semanter::pushType(const TypeInfo &t) {
     typeStack.push(t);
 }
 
@@ -88,54 +94,53 @@ bool Semanter::typeEmpty() const {
     return typeStack.empty();
 }
 
-// ============================================================
-// Классы
-// ============================================================
 
-bool Semanter::declareClass(const std::string& name) {
+bool Semanter::declareClass(const std::string &name) {
     if (classes.contains(name))
         throw std::runtime_error("Класс '" + name + "' уже объявлен");
     classes.emplace(name, ClassEntry(name));
     return true;
 }
 
-bool Semanter::addClassField(const std::string& cn, const std::string& field, const TypeInfo& t) {
-    ClassEntry* c = lookupClass(cn);
+bool Semanter::addClassField(const std::string &cn, const std::string &field, const TypeInfo &t) {
+    ClassEntry *c = lookupClass(cn);
     if (!c)
         throw std::runtime_error("Класс '" + cn + "' не найден");
 
     if (c->fields.contains(field))
         throw std::runtime_error("Поле '" + field + "' уже существует в классе " + cn);
 
-    c->fields.emplace(field, SymbolEntry(field, t, false, 0));
+    c->fields.emplace(
+        field,
+        SymbolEntry(field, t, false, /*slot*/ -1));
     return true;
 }
 
-bool Semanter::addClassMethod(const std::string& cn,
-                              const std::string& m,
-                              const std::string& uniq,
-                              const TypeInfo&   rt) {
-    ClassEntry* c = lookupClass(cn);
+bool Semanter::addClassMethod(const std::string &cn,
+                              const std::string &m,
+                              const std::string &uniq,
+                              const TypeInfo &rt) {
+    ClassEntry *c = lookupClass(cn);
     if (!c)
         throw std::runtime_error("Класс '" + cn + "' не найден");
     c->methods[m].push_back(MethodEntry(cn, m, uniq, rt));
     return true;
 }
 
-bool Semanter::addConstructor(const std::string& cn, const std::string& uniq) {
-    ClassEntry* c = lookupClass(cn);
+bool Semanter::addConstructor(const std::string &cn, const std::string &uniq) {
+    ClassEntry *c = lookupClass(cn);
     if (!c)
         throw std::runtime_error("Класс '" + cn + "' не найден");
     c->constructors.push_back(uniq);
     return true;
 }
 
-ClassEntry* Semanter::lookupClass(const std::string& name) {
+ClassEntry *Semanter::lookupClass(const std::string &name) {
     auto it = classes.find(name);
     return (it == classes.end() ? nullptr : &it->second);
 }
 
-void Semanter::setCurrentClass(const std::string& cn) {
+void Semanter::setCurrentClass(const std::string &cn) {
     currentClass = cn;
 }
 
@@ -143,34 +148,31 @@ void Semanter::clearCurrentClass() {
     currentClass.clear();
 }
 
-// ============================================================
-// Функции
-// ============================================================
 
-bool Semanter::declareFunction(const std::string& name,
-                               const std::string& uniq,
-                               const TypeInfo&   rt) {
+bool Semanter::declareFunction(const std::string &name,
+                               const std::string &uniq,
+                               const TypeInfo &rt) {
     functions[name].push_back(FunctionEntry(name, uniq, rt));
     return true;
 }
 
-bool Semanter::addFunctionParam(const std::string& fname,
-                                const std::string& pname,
-                                const TypeInfo&   t) {
-    auto& vec = functions[fname];
+bool Semanter::addFunctionParam(const std::string &fname,
+                                const std::string &pname,
+                                const TypeInfo &t) {
+    auto &vec = functions[fname];
     if (vec.empty())
         throw std::runtime_error("Функция '" + fname + "' не найдена при добавлении параметра");
-    vec.back().params.push_back(ParamInfo{ pname, t });
+    vec.back().params.push_back(ParamInfo{pname, t});
     return true;
 }
 
-FunctionEntry* Semanter::resolveFunction(const std::string& name,
-                                         const std::vector<TypeInfo>& args) {
+FunctionEntry *Semanter::resolveFunction(const std::string &name,
+                                         const std::vector<TypeInfo> &args) {
     if (!functions.contains(name))
         throw std::runtime_error("Функция '" + name + "' не найдена");
 
-    auto& overloads = functions[name];
-    for (auto& f : overloads) {
+    auto &overloads = functions[name];
+    for (auto &f: overloads) {
         if (f.matchSignature(args))
             return &f;
     }
@@ -178,37 +180,34 @@ FunctionEntry* Semanter::resolveFunction(const std::string& name,
     throw std::runtime_error("Нет подходящей перегрузки функции '" + name + "'");
 }
 
-// ============================================================
-// Методы
-// ============================================================
 
-bool Semanter::addMethodParam(const std::string& cn,
-                              const std::string& m,
-                              const TypeInfo&   t) {
-    ClassEntry* c = lookupClass(cn);
+bool Semanter::addMethodParam(const std::string &cn,
+                              const std::string &m,
+                              const TypeInfo &t) {
+    ClassEntry *c = lookupClass(cn);
     if (!c)
         throw std::runtime_error("Класс '" + cn + "' не найден");
 
-    auto& overloads = c->methods[m];
+    auto &overloads = c->methods[m];
     if (overloads.empty())
         throw std::runtime_error("Метод '" + m + "' не найден в классе " + cn);
 
-    overloads.back().params.push_back(ParamInfo{ "", t });
+    overloads.back().params.push_back(ParamInfo{"", t});
     return true;
 }
 
-MethodEntry* Semanter::resolveMethod(const std::string& cn,
-                                     const std::string& name,
-                                     const std::vector<TypeInfo>& args) {
-    ClassEntry* c = lookupClass(cn);
+MethodEntry *Semanter::resolveMethod(const std::string &cn,
+                                     const std::string &name,
+                                     const std::vector<TypeInfo> &args) {
+    ClassEntry *c = lookupClass(cn);
     if (!c)
         throw std::runtime_error("Класс '" + cn + "' не найден");
 
     if (!c->methods.contains(name))
         throw std::runtime_error("Метод '" + name + "' не найден в классе '" + cn + "'");
 
-    auto& overloads = c->methods[name];
-    for (auto& m : overloads) {
+    auto &overloads = c->methods[name];
+    for (auto &m: overloads) {
         if (m.matchSignature(args))
             return &m;
     }
@@ -216,23 +215,16 @@ MethodEntry* Semanter::resolveMethod(const std::string& cn,
     throw std::runtime_error("Нет подходящей перегрузки метода '" + cn + "." + name + "'");
 }
 
-// ============================================================
-// Совместимость типов и общее числовое приведение
-// ============================================================
 
-bool Semanter::typesCompatible(const TypeInfo& dest, const TypeInfo& src) const {
-    // массивы
+bool Semanter::typesCompatible(const TypeInfo &dest, const TypeInfo &src) const {
     if (dest.isArray || src.isArray)
         return (dest == src);
 
-    // классы
     if (dest.isClass() || src.isClass())
         return (dest == src);
 
-    // одинаковый тип
     if (dest == src) return true;
 
-    // разрешённые неявные преобразования (расширяющие)
     if (src.baseType == Token::Type::KwChar && dest.baseType == Token::Type::KwInt)
         return true;
     if (src.baseType == Token::Type::KwBool && dest.baseType == Token::Type::KwInt)
@@ -240,11 +232,10 @@ bool Semanter::typesCompatible(const TypeInfo& dest, const TypeInfo& src) const 
     if (src.baseType == Token::Type::KwInt && dest.baseType == Token::Type::KwFloat)
         return true;
 
-    // float -> int и другие сужающие — запрещены
     return false;
 }
 
-TypeInfo Semanter::commonNumericType(const TypeInfo& a, const TypeInfo& b) const {
+TypeInfo Semanter::commonNumericType(const TypeInfo &a, const TypeInfo &b) const {
     if (a.isClass() || b.isClass())
         throw std::runtime_error("Операции над объектами классов запрещены");
     if (a.isArray || b.isArray)
@@ -253,28 +244,21 @@ TypeInfo Semanter::commonNumericType(const TypeInfo& a, const TypeInfo& b) const
     if (!a.isNumeric() || !b.isNumeric())
         throw std::runtime_error("Операция над нечисловыми типами");
 
-    // float доминирует
     if (a.baseType == Token::Type::KwFloat || b.baseType == Token::Type::KwFloat)
         return TypeInfo(Token::Type::KwFloat);
 
-    // int доминирует
     if (a.baseType == Token::Type::KwInt || b.baseType == Token::Type::KwInt)
         return TypeInfo(Token::Type::KwInt);
 
-    // char + char
     if (a.baseType == Token::Type::KwChar && b.baseType == Token::Type::KwChar)
         return TypeInfo(Token::Type::KwChar);
 
-    // bool участвует → как int
     if (a.baseType == Token::Type::KwBool || b.baseType == Token::Type::KwBool)
         return TypeInfo(Token::Type::KwInt);
 
     throw std::runtime_error("Недопустимые типы для числовой операции");
 }
 
-// ============================================================
-// Унарные операции
-// ============================================================
 
 bool Semanter::checkUnaryOp(Token::Type op) {
     if (typeStack.empty())
@@ -291,7 +275,7 @@ bool Semanter::checkUnaryOp(Token::Type op) {
             pushType(t);
             return true;
 
-        case Token::Type::Tilde: // побитовое отрицание
+        case Token::Type::Tilde:
             if (!t.isIntegral())
                 throw std::runtime_error("Оператор ~ применим только к целым типам");
             pushType(t);
@@ -308,9 +292,6 @@ bool Semanter::checkUnaryOp(Token::Type op) {
     }
 }
 
-// ============================================================
-// Бинарные операции
-// ============================================================
 
 bool Semanter::checkBinaryOp(Token::Type op) {
     if (typeStack.size() < 2)
@@ -319,23 +300,19 @@ bool Semanter::checkBinaryOp(Token::Type op) {
     TypeInfo b = popType();
     TypeInfo a = popType();
 
-    // сравнение массивов запрещено
     if ((a.isArray || b.isArray) && (
-        op == Token::Type::EqualEqual ||
-        op == Token::Type::NotEqual  ||
-        op == Token::Type::Less      ||
-        op == Token::Type::Greater   ||
-        op == Token::Type::LessEqual ||
-        op == Token::Type::GreaterEqual))
-    {
+            op == Token::Type::EqualEqual ||
+            op == Token::Type::NotEqual ||
+            op == Token::Type::Less ||
+            op == Token::Type::Greater ||
+            op == Token::Type::LessEqual ||
+            op == Token::Type::GreaterEqual)) {
         throw std::runtime_error("Сравнение массивов запрещено");
     }
 
-    // сравнение объектов классов
     if ((a.isClass() || b.isClass()) && (
-        op == Token::Type::EqualEqual ||
-        op == Token::Type::NotEqual))
-    {
+            op == Token::Type::EqualEqual ||
+            op == Token::Type::NotEqual)) {
         if (!(a == b))
             throw std::runtime_error("Сравнение объектов разных классов запрещено");
         pushType(TypeInfo(Token::Type::KwBool));
@@ -343,7 +320,6 @@ bool Semanter::checkBinaryOp(Token::Type op) {
     }
 
     switch (op) {
-        // арифметика
         case Token::Type::Plus:
         case Token::Type::Minus:
         case Token::Type::Asterisk:
@@ -355,7 +331,6 @@ bool Semanter::checkBinaryOp(Token::Type op) {
             return true;
         }
 
-        // остаток
         case Token::Type::Percent: {
             if (!a.isIntegral() || !b.isIntegral())
                 throw std::runtime_error("Оператор % применим только к целым типам");
@@ -364,7 +339,6 @@ bool Semanter::checkBinaryOp(Token::Type op) {
             return true;
         }
 
-        // битовые
         case Token::Type::Shl:
         case Token::Type::Shr:
         case Token::Type::Caret:
@@ -377,7 +351,6 @@ bool Semanter::checkBinaryOp(Token::Type op) {
             return true;
         }
 
-        // сравнение
         case Token::Type::Less:
         case Token::Type::Greater:
         case Token::Type::LessEqual:
@@ -389,7 +362,6 @@ bool Semanter::checkBinaryOp(Token::Type op) {
             pushType(TypeInfo(Token::Type::KwBool));
             return true;
 
-        // логические
         case Token::Type::AmpAmp:
         case Token::Type::PipePipe:
             if (!a.isBool() && !a.isIntegral())
@@ -404,31 +376,24 @@ bool Semanter::checkBinaryOp(Token::Type op) {
     }
 }
 
-// ============================================================
-// Присваивание
-// ============================================================
 
-bool Semanter::checkAssignment(const TypeInfo& left, const TypeInfo& right) {
+bool Semanter::checkAssignment(const TypeInfo &left, const TypeInfo &right) {
     if (!typesCompatible(left, right)) {
         throw std::runtime_error("Несовместимые типы при присваивании: " +
                                  left.toString() + " = " + right.toString());
     }
-    // результат выражения присваивания имеет тип left
     pushType(left);
     return true;
 }
 
-// ============================================================
-// if, return, print, read
-// ============================================================
 
-bool Semanter::checkIfCondition(const TypeInfo& cond) {
+bool Semanter::checkIfCondition(const TypeInfo &cond) {
     if (!cond.isBool() && !cond.isIntegral())
         throw std::runtime_error("Условие if должно быть логическим или integral");
     return true;
 }
 
-bool Semanter::checkReturn(const TypeInfo& expected, const TypeInfo& actual) {
+bool Semanter::checkReturn(const TypeInfo &expected, const TypeInfo &actual) {
     if (expected.isVoid()) {
         if (!actual.isVoid())
             throw std::runtime_error("Функция void не может возвращать значение");
@@ -439,37 +404,34 @@ bool Semanter::checkReturn(const TypeInfo& expected, const TypeInfo& actual) {
     return true;
 }
 
-bool Semanter::checkPrint(const TypeInfo& t) {
+bool Semanter::checkPrint(const TypeInfo &t) {
     if (t.isVoid())
         throw std::runtime_error("print не может печатать void");
     return true;
 }
 
-bool Semanter::checkRead(const TypeInfo& t) {
+bool Semanter::checkRead(const TypeInfo &t) {
     if (t.isVoid())
         throw std::runtime_error("read не может читать void");
     return true;
 }
 
-// ============================================================
-// Вызовы функций / методов
-// ============================================================
 
-bool Semanter::beginFunctionCall(const std::string& name) {
+bool Semanter::beginFunctionCall(const std::string &name) {
     callStack.push_back(CallContext{});
-    auto& ctx = callStack.back();
+    auto &ctx = callStack.back();
     ctx.functionName = name;
-    ctx.className    = "";
-    ctx.isMethod     = false;
+    ctx.className = "";
+    ctx.isMethod = false;
     return true;
 }
 
-bool Semanter::beginMethodCall(const std::string& cn, const std::string& name) {
+bool Semanter::beginMethodCall(const std::string &cn, const std::string &name) {
     callStack.push_back(CallContext{});
-    auto& ctx = callStack.back();
+    auto &ctx = callStack.back();
     ctx.functionName = name;
-    ctx.className    = cn;
-    ctx.isMethod     = true;
+    ctx.className = cn;
+    ctx.isMethod = true;
     return true;
 }
 
@@ -489,7 +451,7 @@ bool Semanter::endFunctionCall() {
     CallContext ctx = callStack.back();
     callStack.pop_back();
 
-    FunctionEntry* f = resolveFunction(ctx.functionName, ctx.argTypes);
+    FunctionEntry *f = resolveFunction(ctx.functionName, ctx.argTypes);
     pushType(f->returnType);
     return true;
 }
@@ -501,14 +463,11 @@ bool Semanter::endMethodCall() {
     CallContext ctx = callStack.back();
     callStack.pop_back();
 
-    MethodEntry* m = resolveMethod(ctx.className, ctx.functionName, ctx.argTypes);
+    MethodEntry *m = resolveMethod(ctx.className, ctx.functionName, ctx.argTypes);
     pushType(m->returnType);
     return true;
 }
 
-// ============================================================
-// Доступ к массиву / полю
-// ============================================================
 
 bool Semanter::checkArrayIndex(TypeInfo arrayType,
                                TypeInfo index,
@@ -519,9 +478,8 @@ bool Semanter::checkArrayIndex(TypeInfo arrayType,
     if (!index.isIntegral())
         throw std::runtime_error("Индекс массива должен быть integral");
 
-    // Дополнительная проверка границ, если знаем индекс как литерал
     if (literalIndex.has_value() && arrayType.arraySize != -1) {
-        int idx  = *literalIndex;
+        int idx = *literalIndex;
         int size = arrayType.arraySize;
         if (idx < 0 || idx >= size) {
             throw std::runtime_error(
@@ -532,16 +490,15 @@ bool Semanter::checkArrayIndex(TypeInfo arrayType,
         }
     }
 
-    // Тип выражения a[...] — тип элемента массива
     pushType(*arrayType.elementType);
     return true;
 }
 
-bool Semanter::checkField(const TypeInfo& obj, const std::string& field) {
+bool Semanter::checkField(const TypeInfo &obj, const std::string &field) {
     if (!obj.isClass())
         throw std::runtime_error("Поле запрашивается не у объекта класса");
 
-    ClassEntry* c = lookupClass(obj.className);
+    ClassEntry *c = lookupClass(obj.className);
     if (!c)
         throw std::runtime_error("Класс '" + obj.className + "' не найден");
 
@@ -553,11 +510,8 @@ bool Semanter::checkField(const TypeInfo& obj, const std::string& field) {
     return true;
 }
 
-// ============================================================
-// Литералы и makeType
-// ============================================================
 
-TypeInfo Semanter::getLiteralType(const Token& tok) const {
+TypeInfo Semanter::getLiteralType(const Token &tok) const {
     switch (tok.type) {
         case Token::Type::IntegerLiteral:
             return TypeInfo(Token::Type::KwInt);
@@ -577,8 +531,7 @@ TypeInfo Semanter::getLiteralType(const Token& tok) const {
     }
 }
 
-// !!! тут был баг, теперь нормально
-TypeInfo Semanter::makeType(Token::Type t, const std::string& className) {
+TypeInfo Semanter::makeType(Token::Type t, const std::string &className) {
     if (t == Token::Type::Identifier) {
         TypeInfo res(Token::Type::Identifier);
         res.className = className;
@@ -587,9 +540,6 @@ TypeInfo Semanter::makeType(Token::Type t, const std::string& className) {
     return TypeInfo(t);
 }
 
-// ============================================================
-// reset / debug
-// ============================================================
 
 void Semanter::reset() {
     tidStack.clear();
@@ -599,7 +549,7 @@ void Semanter::reset() {
     while (!typeStack.empty()) typeStack.pop();
     callStack.clear();
     currentClass.clear();
-    enterScope(); // глобальная область
+    enterScope();
 }
 
 void Semanter::debug() {

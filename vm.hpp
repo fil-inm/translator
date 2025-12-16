@@ -1,41 +1,94 @@
 #pragma once
 #include "poliz.hpp"
 #include <vector>
+#include <functional>
 #include <iostream>
 #include <stdexcept>
+#include <cstring>
+#include <string>
+
+// ==========================
+// InputBuffer
+// ==========================
+
+class InputBuffer {
+public:
+    explicit InputBuffer(std::istream& in) : in(in) {}
+
+    std::string next() {
+        std::string s;
+        if (!(in >> s))
+            throw std::runtime_error("Input exhausted");
+        return s;
+    }
+
+private:
+    std::istream& in;
+};
+
+// ==========================
+// VM
+// ==========================
 
 class VM {
 public:
-    explicit VM(const Poliz& code);
-
-    // запустить исполнение с ip = 0
+    explicit VM(const Poliz& code, InputBuffer& input);
     void run();
 
 private:
     const Poliz& poliz;
+    InputBuffer& input;
+
+    // ==========================
+    // Value
+    // ==========================
 
     struct Value {
         enum class Kind {
             Int,
+            Float,
             Bool,
             Char,
             String
         } kind;
 
-        int data; // для Int/Bool/Char — значение; для String — индекс в stringPool
+        int   i = 0;
+        float f = 0.0f;
+        std::string s;
 
-        static Value makeInt(int v)    { return { Kind::Int,    v }; }
-        static Value makeBool(bool v)  { return { Kind::Bool,   v ? 1 : 0 }; }
-        static Value makeChar(char c)  { return { Kind::Char,   static_cast<int>(c) }; }
-        static Value makeString(int i) { return { Kind::String, i }; }
+        static Value makeInt(int v) {
+            Value x; x.kind = Kind::Int; x.i = v; return x;
+        }
+        static Value makeFloat(float v) {
+            Value x; x.kind = Kind::Float; x.f = v; return x;
+        }
+        static Value makeBool(bool v) {
+            Value x; x.kind = Kind::Bool; x.i = v ? 1 : 0; return x;
+        }
+        static Value makeChar(char c) {
+            Value x; x.kind = Kind::Char; x.i = c; return x;
+        }
+        static Value makeString(const std::string& str) {
+            Value x; x.kind = Kind::String; x.s = str; return x;
+        }
     };
 
     std::vector<Value> stack;
+    std::vector<Value> locals;
+
+    // ==========================
+    // Helpers
+    // ==========================
 
     Value pop();
     void  push(const Value& v);
 
-    // хелперы для арифметики
-    Value binaryIntOp(const std::function<int(int,int)>& f);
-    void  printValue(const Value& v);
+    Value binaryNumOp(
+        const std::function<int(int,int)>&,
+        const std::function<float(float,float)>&
+    );
+
+    Value binaryCmpOp(const std::function<bool(float,float)>&);
+
+    void printValue(const Value& v);
 };
