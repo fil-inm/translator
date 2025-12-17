@@ -4,34 +4,38 @@
 #include <iostream>
 
 
-
 class Poliz {
 public:
+    struct FunctionInfo {
+        std::string name;
+        int entryIp;
+        int paramCount;
+
+        FunctionInfo(const std::string &n, int ip, int pc)
+            : name(n), entryIp(ip), paramCount(pc) {
+        }
+    };
+
     enum class Op {
-        // ===== Константы =====
-        PUSH_INT, // arg1 = int
-        PUSH_FLOAT, // (пока не используется)
-        PUSH_CHAR, // arg1 = char
-        PUSH_BOOL, // arg1 = 0/1
-        PUSH_STRING, // arg1 = string index
+        PUSH_INT,
+        PUSH_FLOAT,
+        PUSH_CHAR,
+        PUSH_BOOL,
+        PUSH_STRING,
 
-        // ===== Переменные =====
-        LOAD_VAR, // arg1 = slot
-        STORE_VAR, // arg1 = slot
+        LOAD_VAR,
+        STORE_VAR,
 
-        // ===== Арифметика =====
         ADD,
         SUB,
         MUL,
         DIV,
         MOD,
 
-        // ===== Унарные =====
         NEG,
         NOT,
         BNOT,
 
-        // ===== Сравнения =====
         CMP_EQ,
         CMP_NE,
         CMP_LT,
@@ -39,68 +43,67 @@ public:
         CMP_GT,
         CMP_GE,
 
-        // ===== Логика =====
         LOG_AND,
         LOG_OR,
 
-        // ===== Битовые операции =====
-        AND, // &
-        OR, // |
-        XOR, // ^
+        AND,
+        OR,
+        XOR,
 
-        // ===== Сдвиги =====
-        SHL, // <<
-        SHR, // >>
+        SHL,
+        SHR,
 
-        // ===== Управление потоком =====
-        JUMP, // arg1 = target ip
-        JUMP_IF_FALSE, // arg1 = target ip
+        JUMP,
+        JUMP_IF_FALSE,
 
-        // ===== Функции =====
-        CALL, // arg1 = func index
-        RET,
+        CALL,
+        RET_VOID,
+        RET_VALUE,
 
-        // ===== Ввод/вывод =====
         PRINT,
-        READ,
-    READ_INT,
-    READ_FLOAT,
-    READ_BOOL,
-    READ_CHAR,
-        READ_STRING,   // ← ДОБАВИТЬ
+        READ_INT,
+        READ_FLOAT,
+        READ_BOOL,
+        READ_CHAR,
+        READ_STRING,
 
-        // ===== Служебные =====
         NOP,
-        HALT
+        HALT,
+        LOAD_ELEM,
+        STORE_ELEM,
     };
 
     struct Instr {
         Op op;
-        int arg1;
-        int arg2;
+        std::optional<int> arg1;
+        std::optional<int> arg2;
 
-        Instr(Op o, int a1 = 0, int a2 = 0)
-            : op(o), arg1(a1), arg2(a2) {
+        Instr(Op o, std::optional<int> arg1 = std::nullopt, std::optional<int> arg2 = std::nullopt)
+            : op(o), arg1(arg1), arg2(arg2) {
         }
     };
 
 private:
     std::vector<Instr> code;
     std::vector<std::string> stringPool;
+    std::vector<FunctionInfo> functions;
 
 public:
-    // ===== Генерация =====
-    int emit(Op op, int arg1 = 0, int arg2 = 0);
+    int emit(Op op,
+             std::optional<int> arg1 = std::nullopt,
+             std::optional<int> arg2 = std::nullopt) {
+        code.emplace_back(op, arg1, arg2);
+        return code.size() - 1;
+    }
 
-    int emitJump(Op op); // JUMP / JUMP_IF_FALSE
+    int emitJump(Op op);
+
     void patchJump(int instr, int ip);
 
-    // ===== Строки =====
     int addString(const std::string &s);
 
     const std::string &getString(int idx) const;
 
-    // ===== Доступ =====
     const Instr &operator[](std::size_t i) const { return code[i]; }
     Instr &operator[](std::size_t i) { return code[i]; }
 
@@ -109,6 +112,22 @@ public:
 
     int currentIp() const { return static_cast<int>(code.size()); }
 
-    // ===== Отладка =====
+
     void dump(std::ostream &os) const;
+
+    int registerFunction(
+        const std::string &name,
+        int entryIp,
+        int paramCount
+    );
+
+    const FunctionInfo &getFunction(int index) const;
+
+    int getFunctionIndex(const std::string &name) const;
+
+    void setFunctionEntry(int index, int entryIp) {
+        if (index < 0 || index >= functions.size())
+            throw std::runtime_error("Invalid function index");
+        functions[index].entryIp = entryIp;
+    }
 };

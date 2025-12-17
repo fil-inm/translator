@@ -140,7 +140,7 @@ Token Lexer::peekNextLexeme() {
     bool oldEof = eof;
     Token oldToken = currentToken;
 
-    Token next = const_cast<Lexer*>(this)->nextLexem();
+    Token next = const_cast<Lexer *>(this)->nextLexem();
 
     file.clear();
     file.seekg(oldPos);
@@ -170,9 +170,8 @@ Token Lexer::readIdentifierOrKeyword() {
         if (word == "float") return makeToken(Token::Type::KwFloat, word, startLine, startCol);
         if (word == "void") return makeToken(Token::Type::KwVoid, word, startLine, startCol);
 
-        if (word == "class") return makeToken(Token::Type::KwClass, word, startLine, startCol);
-        if (word == "constructor") return makeToken(Token::Type::KwConstructor, word, startLine, startCol);
         if (word == "main") return makeToken(Token::Type::KwMain, word, startLine, startCol);
+        if (word == "declare") return makeToken(Token::Type::KwDeclare, word, startLine, startCol);
 
         if (word == "if") return makeToken(Token::Type::KwIf, word, startLine, startCol);
         if (word == "else") return makeToken(Token::Type::KwElse, word, startLine, startCol);
@@ -187,7 +186,6 @@ Token Lexer::readIdentifierOrKeyword() {
 
         if (word == "true") return makeToken(Token::Type::KwTrue, word, startLine, startCol);
         if (word == "false") return makeToken(Token::Type::KwFalse, word, startLine, startCol);
-
     }
 
     return makeToken(Token::Type::Identifier, word, startLine, startCol);
@@ -217,7 +215,7 @@ Token Lexer::readCharLiteral() {
     int startLine = line;
     int startCol = column == 0 ? 1 : column;
 
-    readChar();  // пропускаем открывающую '
+    readChar();
     std::string content;
 
     if (eof || currentChar == '\n' || currentChar == '\'') {
@@ -257,12 +255,18 @@ Token Lexer::readStringLiteral() {
     while (!eof) {
         if (escaped) {
             switch (currentChar) {
-                case 'n': content += '\n'; break;
-                case 't': content += '\t'; break;
-                case 'r': content += '\r'; break;
-                case '\\': content += '\\'; break;
-                case '"': content += '"'; break;
-                default: content += currentChar; break;
+                case 'n': content += '\n';
+                    break;
+                case 't': content += '\t';
+                    break;
+                case 'r': content += '\r';
+                    break;
+                case '\\': content += '\\';
+                    break;
+                case '"': content += '"';
+                    break;
+                default: content += currentChar;
+                    break;
             }
             escaped = false;
         } else if (currentChar == '\\') {
@@ -272,7 +276,7 @@ Token Lexer::readStringLiteral() {
             return makeToken(Token::Type::StringLiteral, content, startLine, startCol);
         } else if (currentChar == '\n' || eof) {
             std::cerr << "Warning: unterminated string literal at "
-                      << startLine << ":" << startCol << "\n";
+                    << startLine << ":" << startCol << "\n";
             break;
         } else {
             content += currentChar;
@@ -354,7 +358,6 @@ Token Lexer::readOperatorOrDelimiter() {
         case ']': return makeToken(Token::Type::RBracket, "]", startLine, startCol);
         case ',': return makeToken(Token::Type::Comma, ",", startLine, startCol);
         case ';': return makeToken(Token::Type::Semicolon, ";", startLine, startCol);
-        case '.': return makeToken(Token::Type::Dot, ".", startLine, startCol);
         case '`': return makeToken(Token::Type::Backtick, "`", startLine, startCol);
         case '+': return makeToken(Token::Type::Plus, "+", startLine, startCol);
         case '-': return makeToken(Token::Type::Minus, "-", startLine, startCol);
@@ -370,7 +373,8 @@ Token Lexer::readOperatorOrDelimiter() {
         case '<': return makeToken(Token::Type::Less, "<", startLine, startCol);
         case '>': return makeToken(Token::Type::Greater, ">", startLine, startCol);
         default:
-            std::cerr << "Unknown token '" << c << "' at " << startLine << ":" << startCol << "\n";
-            return makeToken(Token::Type::Identifier, std::string(1, c), startLine, startCol);
+            throw std::runtime_error(
+                std::string("Unknown token '") + c + "' at " + std::to_string(startLine) + ":" + std::to_string(
+                    startCol));
     }
 }

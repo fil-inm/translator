@@ -1,17 +1,12 @@
 #include "vm.hpp"
 #include <sstream>
 
-// ==========================
-// Конструктор
-// ==========================
+
 
 VM::VM(const Poliz &code, InputBuffer &in)
     : poliz(code), input(in) {
 }
 
-// ==========================
-// Стек
-// ==========================
 
 VM::Value VM::pop() {
     if (stack.empty())
@@ -25,9 +20,7 @@ void VM::push(const Value &v) {
     stack.push_back(v);
 }
 
-// ==========================
-// Арифметика
-// ==========================
+
 
 VM::Value VM::binaryNumOp(
     const std::function<int(int, int)> &intOp,
@@ -55,9 +48,6 @@ VM::Value VM::binaryCmpOp(const std::function<bool(float, float)> &f) {
     return Value::makeBool(f(af, bf));
 }
 
-// ==========================
-// Печать
-// ==========================
 
 void VM::printValue(const Value &v) {
     switch (v.kind) {
@@ -74,21 +64,16 @@ void VM::printValue(const Value &v) {
     }
 }
 
-// ==========================
-// Исполнение
-// ==========================
 
 void VM::run() {
     int ip = 0;
-    locals.clear();
 
     while (ip < (int) poliz.size()) {
         const auto &ins = poliz[ip];
 
         switch (ins.op) {
-            // ===== PUSH =====
             case Poliz::Op::PUSH_INT:
-                push(Value::makeInt(ins.arg1));
+                push(Value::makeInt(*ins.arg1));
                 ++ip;
                 break;
 
@@ -106,20 +91,16 @@ void VM::run() {
                 break;
 
             case Poliz::Op::PUSH_CHAR:
-                push(Value::makeChar(static_cast<char>(ins.arg1)));
+                push(Value::makeChar(static_cast<char>(*ins.arg1)));
                 ++ip;
                 break;
 
             case Poliz::Op::PUSH_STRING:
-                push(Value::makeString(poliz.getString(ins.arg1)));
+                push(Value::makeString(poliz.getString(*ins.arg1)));
                 ++ip;
                 break;
 
-            // ===== Переменные =====
-            case Poliz::Op::LOAD_VAR:
-                push(locals.at(ins.arg1));
-                ++ip;
-                break;
+
 
             case Poliz::Op::NOT: {
                 Value a = pop();
@@ -159,14 +140,111 @@ void VM::run() {
 
             case Poliz::Op::STORE_VAR: {
                 Value v = pop();
-                if (ins.arg1 >= (int) locals.size())
-                    locals.resize(ins.arg1 + 1);
-                locals[ins.arg1] = v;
+                int idx = base + *ins.arg1;
+                if (idx >= (int) stack.size())
+                    stack.resize(idx + 1);
+                stack[idx] = v;
                 ++ip;
                 break;
             }
 
-            // ===== Арифметика =====
+            case Poliz::Op::LOAD_VAR: {
+                int idx = base + *ins.arg1;
+                if (idx < 0 || idx >= (int) stack.size())
+                    throw std::runtime_error("LOAD_VAR out of range");
+                push(stack[idx]);
+                ++ip;
+                break;
+            }
+
+            case Poliz::Op::LOAD_ELEM: {
+                Value idx = pop();
+                int baseSlot = base + *ins.arg1;
+
+                if (idx.kind != Value::Kind::Int)
+                    throw std::runtime_error("LOAD_ELEM: index must be int");
+
+                int addr = baseSlot + idx.i;
+
+                if (addr < 0 || addr >= stack.size())
+                    throw std::runtime_error("LOAD_ELEM: out of range");
+
+                push(stack[addr]);
+                ++ip;
+                break;
+            }
+
+            case Poliz::Op::STORE_ELEM: {
+                Value value = pop();
+                Value idx   = pop();
+
+                if (idx.kind != Value::Kind::Int)
+                    throw std::runtime_error("STORE_ELEM: index must be int");
+
+                int baseSlot = base + *ins.arg1;
+                int addr = baseSlot + idx.i;
+
+                if (addr < 0)
+                    throw std::runtime_error("STORE_ELEM: negative index");
+
+                if (addr >= stack.size())
+                    stack.resize(addr + 1);
+
+                stack[addr] = value;
+                ++ip;
+                break;
+            }
+
+            case Poliz::Op::CALL: {
+                const auto& f = poliz.getFunction(*ins.arg1);
+
+                int argBase = stack.size() - f.paramCount;
+                if (argBase < 0)
+                    throw std::runtime_error("CALL: not enough args");
+
+                callStack.push_back({
+                    ip + 1,
+                    base,
+                    argBase
+                });
+
+                base = argBase;
+                ip = f.entryIp;
+                break;
+            }
+
+            case Poliz::Op::RET_VALUE: {
+                Value ret = pop();
+
+                if (callStack.empty())
+                    throw std::runtime_error("RET_VALUE with empty call stack");
+
+                Frame fr = callStack.back();
+                callStack.pop_back();
+
+                stack.resize(fr.savedStackSize);
+                base = fr.savedBase;
+                ip = fr.returnIp;
+
+                push(ret);
+                break;
+            }
+
+            case Poliz::Op::RET_VOID: {
+                if (callStack.empty()) {
+                    ip = poliz.size();
+                    break;
+                }
+
+                Frame fr = callStack.back();
+                callStack.pop_back();
+
+                stack.resize(fr.savedStackSize);
+                base = fr.savedBase;
+                ip = fr.returnIp;
+                break;
+            }
+
             case Poliz::Op::ADD:
                 push(binaryNumOp(
                     [](int a, int b) { return a + b; },
@@ -205,7 +283,6 @@ void VM::run() {
                 ++ip;
                 break;
 
-            // ===== Битовые =====
             case Poliz::Op::AND: {
                 Value b = pop();
                 Value a = pop();
@@ -258,7 +335,6 @@ void VM::run() {
             }
 
 
-            // ===== Сравнения =====
             case Poliz::Op::CMP_EQ:
                 push(binaryCmpOp([](float a, float b) { return a == b; }));
                 ++ip;
@@ -284,7 +360,6 @@ void VM::run() {
                 ++ip;
                 break;
 
-            // ===== Логика =====
             case Poliz::Op::LOG_AND: {
                 Value b = pop();
                 Value a = pop();
@@ -301,13 +376,12 @@ void VM::run() {
                 break;
             }
 
-            // ===== Переходы =====
             case Poliz::Op::JUMP:
-                ip = ins.arg1;
+                ip = *ins.arg1;
                 break;
 
             case Poliz::Op::JUMP_IF_FALSE:
-                if (pop().i == 0) ip = ins.arg1;
+                if (pop().i == 0) ip = *ins.arg1;
                 else ++ip;
                 break;
 
@@ -362,7 +436,6 @@ void VM::run() {
                 break;
             }
 
-            // ===== I/O =====
             case Poliz::Op::PRINT:
                 printValue(pop());
                 std::cout << "\n";
@@ -384,7 +457,6 @@ void VM::run() {
                 break;
             }
 
-            // ===== Завершение =====
             case Poliz::Op::HALT:
                 return;
 

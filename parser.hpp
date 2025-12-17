@@ -8,13 +8,13 @@
 
 struct LValueDesc {
     enum class Kind {
-        Var,        // обычная переменная
-        ArrayElem,  // a[i]
-        Field       // a.b
+        Var,
+        ArrayElem,
+        Field
     } kind;
 
-    SymbolEntry* base;      // переменная a
-    std::string  field;    // имя поля (если Field)
+    Symbol* base = nullptr;
+    std::string field;
 };
 
 struct LoopCtx {
@@ -30,6 +30,10 @@ public:
 
     bool parseProgram();
 
+    void parseFunctionDeclaration();
+
+    void parseFunctionDefinition();
+
 private:
     Lexer& lex;
     Semanter& sem;
@@ -44,58 +48,56 @@ private:
     bool        hasCurrentFunction = false;
     TypeInfo    currentReturnType;
 
-    std::string currentClassName;
-    bool        inClass = false;
-    bool currentIsMethod = false;
 
     bool match(Token::Type t) ;
     bool matchType() ;
 
-    bool expect(Token::Type t, const std::string& what) ;
+    void expect(Token::Type t, const std::string& what) ;
+
+    void parseMain();
+
+    TypeInfo parseType();
+
+    void parseLiteral();
+    void parseLValue();
+
+    void parseBlock();
+    void parseStatement();
+
+    void parseDeclaration();
+
+    void parseIf();
+
+    void parseWhile();
+
+    void parseFor();
+
+    void parseReturn();
+
+    void parsePrint();
+
+    void parseRead();
 
 
-    bool parseClass();
-    bool parseClassBody();
-    bool parseConstructor();
-
-    bool parseFunction();
-    bool parseParameters();
-    bool parseMain();
-
-    bool parseType() ;
-    TypeInfo parseTypeSemantic();
-
-    bool parseLiteral();
-    bool parseLValue();
-
-    bool parseBlock();
-    bool parseStatement();
-    bool parseDeclarationStatement();
-    bool parseIfStatement();
-    bool parseWhileStatement();
-    bool parseForStatement();
-    bool parseReturnStatement();
-    bool parsePrintStatement();
-    bool parseReadStatement();
-
-    bool parseExpression();
-    bool parseCommaExpression();
-    // bool parseApostropheExpression();
-    bool parseAssignmentExpression();
-    bool parseLogicalOrExpression();
-    bool parseLogicalAndExpression();
-    bool parseBitwiseOrExpression();
-    bool parseBitwiseXorExpression();
-    bool parseBitwiseAndExpression();
-    bool parseEqualityExpression();
-    bool parseRelationalExpression();
-    bool parseShiftExpression();
-    bool parseAdditiveExpression();
-    bool parseMultiplicativeExpression();
-    bool parseUnaryExpression();
-    bool parsePrimaryExpression();
+    void parseExpression();
+    void parseComma();
+    void parseAssignment();
+    void parseLogicalOr();
+    void parseLogicalAnd();
+    void parseBitwiseOr();
+    void parseBitwiseXor();
+    void parseBitwiseAnd();
+    void parseEquality();
+    void parseRelational();
+    void parseShift();
+    void parseAdditive();
+    void parseMultiplicative();
+    void parseUnary();
+    void parsePrimary();
 
     void emitLoadFromLValue(const LValueDesc &lv);
 
     void emitStoreToLValue(const LValueDesc &lv);
+
+    void finalizeRValue();
 };

@@ -1,8 +1,148 @@
-main() {
-    string s;
-    print("Enter your name:");
-    read(s);
-    print("Hello");
-    print(s);
-    print("!");
+// ==============================
+// Объявления функций
+// ==============================
+
+declare void main();
+
+declare int add(int, int);
+declare int add(int);
+
+declare int fib(int);
+declare int fact(int);
+
+declare int max(int, int);
+
+declare int f(int);
+declare int g(int);
+
+// ==============================
+// Арифметика + перегрузка
+// ==============================
+
+int add(int a, int b) {
+    return a + b;
+}
+
+int add(int a) {
+    return a + 10;
+}
+
+// ==============================
+// Рекурсия
+// ==============================
+
+int fib(int n) {
+    if (n == 1 || n == 2) {
+        return 1;
     }
+    else {
+        return fib(n - 1) + fib(n - 2);
+    }
+}
+
+int fact(int n) {
+    if (n <= 1) {
+        return 1;
+    }
+    return n * fact(n - 1);
+}
+
+// ==============================
+// Массивы
+// ==============================
+
+
+int max(int a, int b) {
+    if (a > b) {
+        return a;
+    }
+    return b;
+}
+
+int f(int x) {
+    return g(x-1) + 1;
+}
+
+int g(int x) {
+    if (x < 0) {
+        return x;
+    }
+    return f(x - 1) + 1;
+}
+// ==============================
+// Точка входа
+// ==============================
+
+main {
+    int x;
+    int i;
+    float tr;
+    tr = 2.5;
+
+    // ---- ввод ----
+    read(x);
+    print("Test 1");
+    print(f(x));
+    print("------------");
+    int qw;
+    qw = x + 1+23;
+    print(qw);
+    tr = tr + qw;
+    print(tr);
+
+    // ---- арифметика ----
+    print("add(5, 7) = ");
+    print(add(5, 7));
+
+    print("add(5) = ");
+    print(add(5));
+
+    // ---- рекурсия ----
+    print("fib(x) = ");
+    print(fib(x));
+
+    print("fact(x) = ");
+    print(fact(x));
+
+    // ---- цикл for ----
+    i = 1;
+    for (; i <= x; i = i + 1) {
+
+        // continue
+        if (i == 3) {
+            continue;
+        }
+
+        print("i = ");
+        print(i);
+
+        // break
+        if (i == 6) {
+            break;
+        }
+    }
+
+    // ---- массив ----
+    int a[10];
+
+    i = 0;
+    for (; i < 5; i = i + 1) {
+        a[i] = i * 2;
+    }
+    print("tets1");
+    print(a[3]);
+
+    print("sumArray = ");
+
+    // ---- логика и сравнения ----
+    if (x > 0 && x < 10) {
+        print("x is in range (0,10)");
+    }
+    else {
+        print("x is out of range");
+    }
+
+    // ---- побитовые операции ----
+    print("bitwise test:");
+    print( (x & 3) | 1 );
+}

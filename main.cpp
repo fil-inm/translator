@@ -23,7 +23,7 @@ int main() {
     };
 
     for (const auto& sourceFile : testFiles) {
-        std::cout << "=== Проверяю: " << sourceFile << " ===\n";
+        std::cout << "Компиляция: " << sourceFile << "\n";
 
         Lexer   lexer(sourceFile, keywordsFile);
         Semanter sem;
@@ -34,16 +34,13 @@ int main() {
         if (parser.parseProgram()) {
             std::cout << "Разбор завершён успешно\n";
 
-            poliz.emit(Poliz::Op::HALT);
-
             poliz.dump(std::cout);
 
-            std::cout << "--- VM input ---\n";
+            std::cout << "VM start\n";
             InputBuffer input(std::cin);
 
             VM vm(poliz, input);
             vm.run();
-            std::cout << "-----------------\n\n";
         }
     }
 

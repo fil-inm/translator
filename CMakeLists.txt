@@ -14,4 +14,5 @@ add_executable(TranslatorLexer
         poliz.cpp
         vm.cpp
         vm.hpp
+        typeinfo.hpp
         )

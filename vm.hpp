@@ -7,9 +7,6 @@
 #include <cstring>
 #include <string>
 
-// ==========================
-// InputBuffer
-// ==========================
 
 class InputBuffer {
 public:
@@ -26,9 +23,7 @@ private:
     std::istream& in;
 };
 
-// ==========================
-// VM
-// ==========================
+
 
 class VM {
 public:
@@ -39,9 +34,17 @@ private:
     const Poliz& poliz;
     InputBuffer& input;
 
-    // ==========================
-    // Value
-    // ==========================
+
+    struct Frame {
+        int returnIp;
+        int savedBase;
+        int savedStackSize;
+
+    };
+
+    int base = 0;
+
+    std::vector<Frame> callStack;
 
     struct Value {
         enum class Kind {
@@ -74,11 +77,7 @@ private:
     };
 
     std::vector<Value> stack;
-    std::vector<Value> locals;
 
-    // ==========================
-    // Helpers
-    // ==========================
 
     Value pop();
     void  push(const Value& v);

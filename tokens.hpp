@@ -18,7 +18,7 @@ struct Token {
         LParen, RParen,
         LBrace, RBrace,
         LBracket, RBracket,
-        Comma, Semicolon, Dot, Backtick,
+        Comma, Semicolon, Backtick,
 
         Plus, Minus, Asterisk, Slash, Percent,
         PlusPlus, MinusMinus,
@@ -34,10 +34,9 @@ struct Token {
         EqualEqual, NotEqual,
         Less, Greater, LessEqual, GreaterEqual,
 
-        KwInt, KwChar, KwBool, KwFloat, KwVoid,
+        KwInt, KwChar, KwBool, KwFloat, KwVoid, KwString,
 
-        KwClass,
-        KwConstructor,
+
         KwMain,
 
         KwIf, KwElse,
@@ -47,8 +46,9 @@ struct Token {
         KwPrint, KwRead,
 
         KwTrue, KwFalse,
+        KwDeclare
 
-        TypeName
+
     };
 
     Type type;
@@ -76,7 +76,6 @@ inline std::string tokenTypeName(Token::Type t) {
         case T::RBracket: return "]";
         case T::Comma: return ",";
         case T::Semicolon: return ";";
-        case T::Dot: return ".";
         case T::Backtick: return "`";
 
         case T::Plus: return "+";
@@ -112,8 +111,6 @@ inline std::string tokenTypeName(Token::Type t) {
         case T::KwBool: return "bool";
         case T::KwFloat: return "float";
         case T::KwVoid: return "void";
-        case T::KwClass: return "class";
-        case T::KwConstructor: return "constructor";
         case T::KwMain: return "main";
         case T::KwIf: return "if";
         case T::KwElse: return "else";
@@ -126,10 +123,10 @@ inline std::string tokenTypeName(Token::Type t) {
         case T::KwRead: return "read";
         case T::KwTrue: return "true";
         case T::KwFalse: return "false";
+        case T::KwDeclare: return "declare";
 
 
 
-        case T::TypeName: return "<type-name>";
     }
     return "<unknown>";
 }

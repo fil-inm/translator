@@ -3,8 +3,6 @@ char
 bool
 float
 void
-class
-constructor
 main
 
 
@@ -21,3 +19,4 @@ read
 
 true
 false
+declare
